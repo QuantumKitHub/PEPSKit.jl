@@ -90,6 +90,17 @@ function _bond_rotation(x, dir_from::Int, dir_to::Int)
     end
 end
 
+# Endpoint orthogonal factors keep their remaining physical axes before the four virtual axes.
+function _bond_rotation(X::Union{PEPSOrth, PEPOOrth}, dir_from::Int, dir_to::Int)
+    Np = numind(X) - 4
+    return permute(
+        X, (
+            ntuple(identity, Np)...,
+            ntuple(i -> Np + mod1(i + dir_from - dir_to, 4), 4)...,
+        )
+    )
+end
+
 """
 Map a site coordinate from the lattice frame where the bond has orientation
 `dir_from` to the frame where the bond has orientation `dir_to`.

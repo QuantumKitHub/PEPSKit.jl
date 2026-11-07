@@ -22,7 +22,7 @@ function _ntu_iter!(
     _flip_virtuals!(Ms, flips) # flip virtual arrows in `Ms` to ←
 
     # apply gate MPO without truncation
-    _apply_gatempo!(Ms, gate)
+    _apply_gatempo!(Ms, gate; allocator)
     _flip_virtuals!(Ms, flips) # restore virtual arrows in `Ms`
     for (M, s, invperm) in zip(Ms, sites, invperms)
         state[s] = permute(M, invperm)
@@ -64,30 +64,36 @@ function _bond_truncate!(
         alg::NeighbourUpdate; gate::Union{NNGate, Nothing} = nothing,
         allocator = DefaultAllocator()
     )
-    # Rotate only the endpoints; environment neighbors are rotated when collected.
+    # Reduce in the original frame; orient only the orthogonal factors for the environment.
     (dir, r, c) = _nn_bonddir(site1, site2)
-    A = _bond_rotation(state[site1], dir, EAST)
-    B = _bond_rotation(state[site2], dir, EAST)
+    A = state[site1]
+    B = state[site2]
+    dir_opposite = mod1(dir + 2, 4)
 
     # create bond environment
-    qrtrunc = trunctol(; rtol = 1.0e-12)
-    a, X = if stype1 == :first
-        bond_tensor_first(A; trunc = qrtrunc)
+    # MPO-expanded tensors need rank compression; NN gates are applied after reduction.
+    orth_kwargs = isnothing(gate) ? (; trunc = trunctol(; rtol = 1.0e-12)) : (; positive = true)
+    X, a = if stype1 == :first
+        bond_tensor_end(A, dir; orth_kwargs...)
     else
         @assert stype1 == :middle
-        bond_tensor_midnext(A; trunc = qrtrunc)
+        bond_tensor_mid(A, dir; orth_kwargs...)
     end
-    b, Y = if stype2 == :last
-        bond_tensor_last(B; trunc = qrtrunc)
+    Y, b = if stype2 == :last
+        bond_tensor_end(B, dir_opposite; orth_kwargs...)
     else
         @assert stype2 == :middle
-        bond_tensor_midprev(B; trunc = qrtrunc)
+        bond_tensor_mid(B, dir_opposite; orth_kwargs...)
     end
+    X, Y = _bond_rotation(X, dir, EAST), _bond_rotation(Y, dir, EAST)
+    # Gauge fixing and bond truncation use the MPS-chain layouts on both sides.
+    a_chain = permute(a, ((1, 2), (3,)))
+    b_chain = permute(b, ((3, 2), (1,)))
     benv = bondenv_ntu(site1[1], site1[2], dir, X, Y, state, alg.bondenv_alg; allocator)
     @debug "cond(benv) before gauge fix: $(LinearAlgebra.cond(benv))"
     if alg.fixgauge
         Z = positive_approx(benv)
-        Z, a, b, (Linv, Rinv) = fixgauge_benv(Z, a, b)
+        Z, a_chain, b_chain, (Linv, Rinv) = fixgauge_benv(Z, a_chain, b_chain)
         X = _fixgauge_benvX(X, Rinv)
         Y = _fixgauge_benvY(Y, Linv)
         benv = Z' * Z
@@ -97,23 +103,30 @@ function _bond_truncate!(
 
     # (optional) apply the NN gate without truncation
     if !(gate === nothing)
+        a = permute(a_chain, ((1,), (2, 3)))
+        b = permute(b_chain, ((3,), (2, 1)))
         a, _, b, = _apply_bond_gate(a, b, gate, truncerror(; atol = 1.0e-15))
+        a_chain = permute(a, ((1, 2), (3,)))
+        b_chain = permute(b, ((3, 2), (1,)))
     end
-    a, s, b, info = bond_truncate(a, b, benv, alg.opt_alg)
+    a_chain, s, b_chain, info = bond_truncate(a_chain, b_chain, benv, alg.opt_alg)
 
+    X, Y = _bond_rotation(X, EAST, dir), _bond_rotation(Y, EAST, dir)
+    a = permute(a_chain, ((1,), (2, 3)))
     A = if stype1 == :first
-        undo_bond_tensor_first(a, X)
+        undo_bond_tensor_end(a, X, dir)
     else
-        undo_bond_tensor_midnext(a, X)
+        undo_bond_tensor_mid(a, X, dir)
     end
+    b = permute(b_chain, ((3,), (2, 1)))
     B = if stype2 == :last
-        undo_bond_tensor_last(b, Y)
+        undo_bond_tensor_end(b, Y, dir_opposite)
     else
-        undo_bond_tensor_midprev(b, Y)
+        undo_bond_tensor_mid(b, Y, dir_opposite)
     end
 
-    state[site1] = normalize!(_bond_rotation(A, EAST, dir), Inf)
-    state[site2] = normalize!(_bond_rotation(B, EAST, dir), Inf)
+    state[site1] = normalize!(A, Inf)
+    state[site2] = normalize!(B, Inf)
     d = dir in (EAST, WEST) ? 1 : 2
     wts[d, r, c] = normalize!(dir in (WEST, SOUTH) ? transpose(s) : s, Inf)
     return state, wts, info

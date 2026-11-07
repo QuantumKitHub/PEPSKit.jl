@@ -49,56 +49,7 @@ function _orient_bond(state::InfiniteState, sites::Vector{CartesianIndex{2}}, ga
 end
 
 """
-    _bond_qr(T, k, gate_ax, [allocator]) -> Q, R, p
-
-Split `T = Q * R`, where the reduced tensor `R : x ← p ⊗ v` holds the physical axis `gate_ax`
-and the virtual axis `k` (the bond) of `T`, while `Q` holds all other axes. `p` is the
-permutation that brings the product back to the leg order of `T`. For example, for a
-PEPSTensor `T[p; n e s w]` with the bond `v = e` on its east axis (`k = 2`),
-```
-        n                       n
-        |                       |
-    w - T - v       =       w - Q ← x ← R - v
-        | ↘                     |        ↘
-        s   p                   s         p
-```
-For a PEPOTensor, the physical axis that is not `gate_ax` stays in `Q`.
-The permuted copy of `T` that is factorized is a temporary allocated with `allocator`.
-"""
-function _bond_qr(
-        T::Union{PEPSTensor, PEPOTensor}, k::Int, gate_ax::Int, allocator = DefaultAllocator()
-    )
-    Np, M = numout(T), numind(T)
-    r = (gate_ax, Np + k)
-    q = TupleTools.deleteat(ntuple(identity, M), r)
-    cp = allocator_checkpoint!(allocator)
-    T′ = tensoralloc_add(scalartype(T), T, (q, r), false, Val(true), allocator)
-    tensoradd!(T′, T, (q, r), false, One(), Zero(), DefaultBackend(), allocator)
-    Q, R = left_orth!(T′; positive = true)
-    tensorfree!(T′, allocator)
-    allocator_reset!(allocator, cp)
-    return Q, R, _inv_mpo_perm((q..., r...), Val(Np))
-end
-
-"""
-    _undo_bond_qr(Q, X, pX, p, [allocator])
-
-Inverse of [`_bond_qr`](@ref): contract `Q` with `X`, whose legs selected by `pX` are
-ordered as `x ← p ⊗ v`, into the leg order specified by `p`.
-"""
-function _undo_bond_qr(
-        Q::AbstractTensorMap, X::AbstractTensorMap, pX, p, allocator = DefaultAllocator()
-    )
-    N = numind(Q)
-    pQ = (ntuple(identity, N - 1), (N,))
-    cp = allocator_checkpoint!(allocator)
-    T = tensorcontract(Q, pQ, false, X, pX, false, p, One(), DefaultBackend(), allocator)
-    allocator_reset!(allocator, cp)
-    return T
-end
-
-"""
-    _apply_bond_gate(R₁, R₂, gate, trunc, [allocator]) -> U, S, Vᴴ, ϵ
+    _apply_bond_gate(R₁, R₂, gate, trunc, [allocator]) -> R₁, S, R₂, ϵ
 
 Apply the 2-site `gate` to the reduced tensors `R₁ : x₁ ← p₁ ⊗ v` and `R₂ : x₂ ← p₂ ⊗ v'`
 ```
@@ -115,7 +66,7 @@ a PEPO), and split the result as `U S Vᴴ` with a truncated SVD. The square roo
 absorbed into `U : x₁ ⊗ p₁ ← v′` and `Vᴴ : v′ ← x₂ ⊗ p₂`.
 """
 function _apply_bond_gate(
-        R₁::AbstractTensorMap, R₂::AbstractTensorMap, gate::NNGate,
+        R₁::ReducedBondTensor, R₂::ReducedBondTensor, gate::NNGate,
         trunc::TruncationStrategy, allocator = DefaultAllocator()
     )
     θ = if isdual(space(R₁, 2))
@@ -127,34 +78,12 @@ function _apply_bond_gate(
     end
     U, S, Vᴴ, ϵ = svd_trunc!(θ; trunc)
     absorb_s!(U, S, Vᴴ)
-    return U, S, Vᴴ, ϵ
-end
-
-"""
-$(SIGNATURES)
-
-Apply 2-site `gate` on the reduced bond tensors `a`, `b`
-```
-    -1← a --- 3 --- b ← -4          -2         -3
-        ↓           ↓               ↓           ↓
-        1           2               |----gate---|
-        ↓           ↓       or      ↓           ↓
-        |----gate---|               1           2
-        ↓           ↓               ↓           ↓
-        -2         -3           -1← a --- 3 --- b ← -4
-```
-"""
-function _apply_bond_gate(
-        a::MPSTensor, b::MPSTensor, gate::NNGate,
-        trunc::TruncationStrategy, allocator = DefaultAllocator()
-    )
-    need_flip = isdual(space(b, 1))
-    # The common kernel expects both reduced tensors in QR order: x ← p ⊗ v.
-    R₁ = permute(a, ((1,), (2, 3)))
-    R₂ = permute(b, ((3,), (2, 1)))
-    a, s, b, ϵ = _apply_bond_gate(R₁, R₂, gate, trunc, allocator)
-    if need_flip
-        a, s, b = flip(a, numind(a)), _fliptwist_s!(s), flip(b, 1)
+    if isdual(space(R₂, 3))
+        U, S, Vᴴ = flip(U, numind(U)), _fliptwist_s!(S), flip(Vᴴ, 1)
     end
-    return a, s, permute(b, ((1, 3), (2,))), ϵ
+    R₁ = permute(U, ((1,), (2, 3)))
+    # TODO: Avoid copying Vᴴ into the reduced-tensor layout when reconstruction can
+    # consume its SVD layout directly.
+    R₂ = permute(Vᴴ, ((2,), (3, 1)))
+    return R₁, S, R₂, ϵ
 end

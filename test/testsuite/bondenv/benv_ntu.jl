@@ -16,8 +16,10 @@ function test_ntu_env(
     @info "Testing $(typeof(env_alg))"
     for row in 1:Nr, col in 1:Nc
         A, B = state[row, col], state[row, col + 1]
-        a, X = PEPSKit.bond_tensor_first(A)
-        b, Y = PEPSKit.bond_tensor_last(B)
+        X, a = PEPSKit.bond_tensor_end(A, EAST)
+        Y, b = PEPSKit.bond_tensor_end(B, WEST)
+        a = permute(a, ((1, 2), (3,)))
+        b = permute(b, ((3, 2), (1,)))
         @tensor ab[DX DY; da db] := a[DX da D] * b[D db DY]
         benv = PEPSKit.bondenv_ntu(row, col, EAST, X, Y, state, env_alg)
         # this is a result of `bond_tensor_...`

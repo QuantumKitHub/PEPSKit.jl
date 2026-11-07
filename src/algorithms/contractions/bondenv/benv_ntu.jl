@@ -32,7 +32,7 @@ struct NNEnv <: NeighbourEnv end
 Calculate the bond environment within "NTU-NN" approximation.
 `(row, col)` locates the site of `X` in the original `state`.
 `dir` is the direction from X to `Y` (`NORTH`, `EAST`, `SOUTH`, or `WEST`).
-`X` and `Y` must be obtained from already rotated site tensors,
+`X` and `Y` must be orthogonal factors in the east-facing bond frame,
 while `state` stays in its original orientation.
 `allocator` supplies temporary storage for the common environment contraction.
 ```
@@ -65,7 +65,7 @@ struct NNpEnv <: NeighbourEnv end
 Calculate the bond environment within "NTU-NN+" approximation.
 `(row, col)` locates the site of `X` in the original `state`.
 `dir` is the direction from X to `Y` (`NORTH`, `EAST`, `SOUTH`, or `WEST`).
-`X` and `Y` must be obtained from already rotated site tensors,
+`X` and `Y` must be orthogonal factors in the east-facing bond frame,
 while `state` stays in its original orientation.
 `allocator` supplies temporary storage for the common environment contraction.
 ```

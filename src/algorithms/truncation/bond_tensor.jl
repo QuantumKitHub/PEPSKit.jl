@@ -1,213 +1,99 @@
+"Reduced bond factor `R[q; physical bond]`, with one outgoing and two incoming legs."
+const ReducedBondTensor{T, S} = AbstractTensorMap{T, S, 1, 2}
+
 """
-Given the first tensor `A` in the cluster acted on by a gate,
-obtain reduced tensor on its next bond.
+    bond_tensor_end(A, dir; gate_ax = 1, allocator = DefaultAllocator(), kwargs...)
 
-For PEPSTensor,
-```
-        1
-        |
-    4 - X ← 2   1 ← a - 3
-        |            ↘
-        3             2
-```
-For PEPOTensor,
-```
-    gate_ax = 1                 gate_ax = 2
+Use `left_orth` to factor out the physical axis `gate_ax` and
+virtual leg `dir` of `A`, returning `(X, R)` with `R[q; physical bond]`.
 
-    1   2                           2         2
-      ↘ |                           |          ↘
-    5 - X ← 3   1 ← a - 3       5 - X ← 3   1 ← a - 3
-        |            ↘              | ↘
-        4             2             4   1
+For a PEPS tensor `A` with `dir = EAST`, `gate_ax = 1`:
+```
+        n                       n
+        │                       │
+    w ─ A ─ e       =       w ─ X ← q ← R ─ e
+        │ ╲                     │         ╲
+        s  p                    s          p
 ```
 """
-function bond_tensor_first(A::PEPSTensor; gate_ax::Integer = 1, kwargs...)
-    @assert gate_ax == 1
-    X, a = left_orth!(permute(A, ((2, 4, 5), (1, 3)); copy = true); kwargs...)
-    X = permute(X, (1, 4, 2, 3))
-    a = permute(a, ((1, 2), (3,)))
-    return a, X
-end
-function bond_tensor_first(A::PEPOTensor; gate_ax::Integer = 1, kwargs...)
-    @assert 1 <= gate_ax <= 2
-    X, a = if gate_ax == 1
-        left_orth!(permute(A, ((2, 3, 5, 6), (1, 4)); copy = true); kwargs...)
-    else
-        left_orth!(permute(A, ((1, 3, 5, 6), (2, 4)); copy = true); kwargs...)
+function bond_tensor_end(A::AbstractTensorMap{T, S, Np, 4}, dir::Int; gate_ax::Integer = 1, allocator = DefaultAllocator(), kwargs...) where {T, S, Np}
+    @assert 1 <= dir <= 4
+    @assert 1 <= gate_ax <= Np
+    reduced = (gate_ax, Np + dir)
+    open = TupleTools.deleteat(ntuple(identity, numind(A)), reduced)
+    partition = (open, reduced)
+    cp = allocator_checkpoint!(allocator)
+    A′ = tensoralloc_add(scalartype(A), A, partition, false, Val(true), allocator)
+    X, R = try
+        tensoradd!(A′, A, partition, false, One(), Zero(), DefaultBackend(), allocator)
+        left_orth!(A′; kwargs...)
+    finally
+        tensorfree!(A′, allocator)
+        allocator_reset!(allocator, cp)
     end
-    X = permute(X, (1, 2, 5, 3, 4))
-    a = permute(a, ((1, 2), (3,)))
-    return a, X
+    virtual = TupleTools.insertafter(ntuple(i -> Np - 1 + i, 3), dir - 1, (Np + 3,))
+    # TODO: can we cleanly avoid this?
+    X = permute(X, (ntuple(identity, Np - 1)..., virtual...))
+    return X, R
 end
 
 """
-Undo the decomposition in `bond_tensor_first`.
-"""
-function undo_bond_tensor_first(a::MPSTensor, X::PEPSOrth; gate_ax::Integer = 1)
-    @assert gate_ax == 1
-    return @tensor A[-1; -2 -3 -4 -5] := X[-2 1 -4 -5] * a[1 -1 -3]
-end
-function undo_bond_tensor_first(a::MPSTensor, X::PEPOOrth; gate_ax::Integer = 1)
-    @assert 1 <= gate_ax <= 2
-    if gate_ax == 1
-        return @tensor A[-1 -2; -3 -4 -5 -6] := X[-2 -3 1 -5 -6] * a[1 -1 -4]
-    else
-        return @tensor A[-1 -2; -3 -4 -5 -6] := X[-1 -3 1 -5 -6] * a[1 -2 -4]
-    end
-end
+    undo_bond_tensor_end(R, X, dir; gate_ax = 1, allocator = DefaultAllocator())
 
+Undo `bond_tensor_end`, reconstructing directly in the original frame.
+`R` has layout `R[q; physical bond]`; `X` and the result use the original frame.
 """
-Given the last tensor `A` in the cluster acted on by a gate,
-obtain reduced tensor on its previous bond.
-
-For PEPSTensor,
-```
-                    1
-                    |
-    1 - b → 3   4 → Y - 2
-          ↘         |
-            2       3
-```
-For PEPOTensor,
-```
-    gate_ax = 1                 gate_ax = 2
-
-                 1  2             2             2
-                  ↘ |              ↘            |
-    1 - b → 3   5 → Y - 3       1 - b → 3   5 → Y - 3
-         ↘          |                           | ↘
-          2         4                           4  1
-```
-"""
-function bond_tensor_last(A::PEPSTensor; gate_ax::Integer = 1, kwargs...)
-    @assert gate_ax == 1
-    Y, b = left_orth!(permute(A, ((2, 3, 4), (1, 5)); copy = true); kwargs...)
-    Y = permute(Y, (1, 2, 3, 4))
-    b = permute(b, ((3, 2), (1,)))
-    return b, Y
-end
-function bond_tensor_last(A::PEPOTensor; gate_ax::Integer = 1, kwargs...)
-    @assert 1 <= gate_ax <= 2
-    Y, b = if gate_ax == 1
-        left_orth!(permute(A, ((2, 3, 4, 5), (1, 6)); copy = true); kwargs...)
-    else
-        left_orth!(permute(A, ((1, 3, 4, 5), (2, 6)); copy = true); kwargs...)
-    end
-    Y = permute(Y, (1, 2, 3, 4, 5))
-    b = permute(b, ((3, 2), (1,)))
-    return b, Y
-end
-
-"""
-Undo the decomposition in `bond_tensor_last`.
-"""
-function undo_bond_tensor_last(b::MPSTensor, Y::PEPSOrth; gate_ax::Integer = 1)
-    @assert gate_ax == 1
-    return @tensor A[-1; -2 -3 -4 -5] := b[-5 -1 1] * Y[-2 -3 -4 1]
-end
-function undo_bond_tensor_last(b::MPSTensor, Y::PEPOOrth; gate_ax::Integer = 1)
-    @assert 1 <= gate_ax <= 2
-    if gate_ax == 1
-        return @tensor A[-1 -2; -3 -4 -5 -6] := b[-6 -1 1] * Y[-2 -3 -4 -5 1]
-    else
-        return @tensor A[-1 -2; -3 -4 -5 -6] := b[-6 -2 1] * Y[-1 -3 -4 -5 1]
+function undo_bond_tensor_end(R::ReducedBondTensor, X::AbstractTensor, dir::Int; gate_ax::Integer = 1, allocator = DefaultAllocator())
+    @assert 1 <= dir <= 4
+    Np, N = numind(X) - 3, numind(X)
+    @assert 1 <= gate_ax <= Np
+    contracted = Np - 1 + dir
+    free = TupleTools.deleteat(ntuple(identity, N), contracted)
+    physical = TupleTools.insertafter(ntuple(identity, Np - 1), gate_ax - 1, (Np + 3,))
+    virtual = TupleTools.insertafter(ntuple(i -> Np - 1 + i, 3), dir - 1, (Np + 4,))
+    output = (physical, virtual)
+    cp = allocator_checkpoint!(allocator)
+    try
+        return tensorcontract(
+            X, (free, (contracted,)), false, R, ((1,), (2, 3)), false,
+            output, One(), DefaultBackend(), allocator
+        )
+    finally
+        allocator_reset!(allocator, cp)
     end
 end
 
 """
-Given a middle tensor `A` in the cluster acted on by a gate,
-obtain reduced tensor on its next bond.
+    bond_tensor_mid(A, dir; allocator = DefaultAllocator(), kwargs...)
 
-For PEPSTensor,
-```
-        2
-        |
-    5 - X ← 3   1 ← a - 3
-        | ↘          ↘
-        4   1         (2)
-```
-For PEPOTensor,
-```
-    2   3
-      ↘ |
-    6 - X ← 4   1 ← a - 3
-        | ↘          ↘
-        5   1         (2)
-```
+Use QR decomposition to factor out virtual leg `dir` of `A`,
+returning `(X, R)` with the physical axes kept in `X`.
 
-Here the physical leg on `a` is an auxiliary trivial leg.
+For a PEPS tensor `A` with `dir = EAST`:
+```
+        n                       n
+        │                       │
+    w ─ A ─ e       =       w ─ X ← q ← R ─ e
+        │ ╲                     │ ╲       ╲
+        s  p                    s  p       (1)
+```
+The `(1)` leg of `R[q; auxiliary bond]` is a trivial physical leg.
 """
-function bond_tensor_midnext(A::PEPSTensor; kwargs...)
-    X, a = left_orth!(permute(A, ((1, 2, 4, 5), (3,)); copy = true); kwargs...)
-    X = permute(X, ((1,), (2, 5, 3, 4)))
-    a = insertrightunit(a, 1)
-    return a, X
-end
-function bond_tensor_midnext(A::PEPOTensor; kwargs...)
-    X, a = left_orth!(permute(A, ((1, 2, 3, 5, 6), (4,)); copy = true); kwargs...)
-    X = permute(X, ((1, 2), (3, 6, 4, 5)))
-    a = insertrightunit(a, 1)
-    return a, X
+function bond_tensor_mid(A::Union{PEPSTensor, PEPOTensor}, dir::Int; allocator = DefaultAllocator(), kwargs...)
+    # insert the auxiliary trivial physical leg in front of existing ones
+    # so it can be factored into R using `bond_tensor_end` with `gate_ax = 1`
+    X, R = bond_tensor_end(insertleftunit(A, Val(1)), dir; allocator, kwargs...)
+    return permute(X, (codomainind(A), domainind(A))), R
 end
 
 """
-Undo the decomposition in `bond_tensor_midprev`.
-"""
-function undo_bond_tensor_midnext(a::MPSTensor, X::PEPSTensor)
-    a = removeunit(a, 2)
-    return @tensor A[-1; -2 -3 -4 -5] := X[-1; -2 1 -4 -5] * a[1; -3]
-end
-function undo_bond_tensor_midnext(a::MPSTensor, X::PEPOTensor)
-    a = removeunit(a, 2)
-    return @tensor A[-1 -2; -3 -4 -5 -6] := X[-1 -2; -3 1 -5 -6] * a[1; -4]
-end
+    undo_bond_tensor_mid(R, X, dir; allocator = DefaultAllocator())
 
+Reconstruct a middle tensor with `undo_bond_tensor_end`, then remove the trivial
+physical leg introduced by `bond_tensor_mid`.
 """
-Given a middle tensor `A` in the cluster acted on by a gate,
-obtain reduced tensor on its previous bond.
-
-For PEPSTensor,
-```
-                    2
-                    |
-    1 - b → 3   5 → Y - 3
-          ↘         | ↘  
-           (2)      4   1
-```
-For PEPOTensor,
-```
-                2   3
-                  ↘ |
-    1 - b → 3   6 → Y - 4
-          ↘         | ↘  
-           (2)      5   1
-```
-
-Here the physical leg on `a` is an auxiliary trivial leg.
-"""
-function bond_tensor_midprev(A::PEPSTensor; kwargs...)
-    Y, b = left_orth!(permute(A, ((1, 2, 3, 4), (5,)); copy = true); kwargs...)
-    Y = permute(Y, ((1,), (2, 3, 4, 5)))
-    b = permute(b, ((2,), (1,)))
-    b = insertrightunit(b, 1)
-    return b, Y
-end
-function bond_tensor_midprev(A::PEPOTensor; kwargs...)
-    Y, b = left_orth!(permute(A, ((1, 2, 3, 4, 5), (6,)); copy = true); kwargs...)
-    Y = permute(Y, ((1, 2), (3, 4, 5, 6)))
-    b = permute(b, ((2,), (1,)))
-    b = insertrightunit(b, 1)
-    return b, Y
-end
-
-"""
-Undo the decomposition in `bond_tensor_midprev`.
-"""
-function undo_bond_tensor_midprev(b::MPSTensor, Y::PEPSTensor)
-    b = removeunit(b, 2)
-    return @tensor A[-1; -2 -3 -4 -5] := b[-5; 1] * Y[-1; -2 -3 -4 1]
-end
-function undo_bond_tensor_midprev(b::MPSTensor, Y::PEPOTensor)
-    b = removeunit(b, 2)
-    return @tensor A[-1 -2; -3 -4 -5 -6] := b[-6; 1] * Y[-1 -2; -3 -4 -5 1]
+function undo_bond_tensor_mid(R::ReducedBondTensor, X::Union{PEPSTensor, PEPOTensor}, dir::Int; allocator = DefaultAllocator())
+    X = permute(X, ntuple(identity, numind(X)))
+    A = undo_bond_tensor_end(R, X, dir; allocator)
+    return removeunit(A, Val(1))
 end
