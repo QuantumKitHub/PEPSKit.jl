@@ -107,8 +107,7 @@ function leading_boundary(env₀::AbstractCTMRGEnv, network::InfiniteSquareNetwo
 end
 function leading_boundary(
         env₀::AbstractCTMRGEnv, network::InfiniteSquareNetwork, alg::CTMRGAlgorithm;
-        scheduler = Defaults.scheduler[],
-        allocator = default_allocator(network, scheduler)
+        allocator = default_allocator(network, SerialScheduler())
     )
     check_input(leading_boundary, network, env₀, alg)
     log = ignore_derivatives(() -> MPSKit.IterLog("CTMRG"))

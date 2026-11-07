@@ -12,8 +12,7 @@ the second signature yields a bilayer contraction instead.
 """
 function MPSKit.expectation_value(
         bra::S, O::LocalOperator, ket::S, env;
-        scheduler = Defaults.scheduler[],
-        allocator = default_allocator(bra, scheduler)
+        allocator = default_allocator(bra, SerialScheduler())
     ) where {S <: InfiniteState}
     checklattice(bra, O, ket)
     term_vals = dtmap(collect(O.terms)) do (inds, operator)  # OhMyThreads can't iterate over O.terms directly
@@ -23,13 +22,11 @@ function MPSKit.expectation_value(
 end
 MPSKit.expectation_value(
     peps::InfinitePEPS, O::LocalOperator, env;
-    scheduler = Defaults.scheduler[],
-    allocator = default_allocator(peps, scheduler)
-) = expectation_value(peps, O, peps, env; scheduler, allocator)
+    allocator = default_allocator(peps, SerialScheduler())
+) = expectation_value(peps, O, peps, env; allocator)
 function MPSKit.expectation_value(
         state::InfinitePEPO, O::LocalOperator, env;
-        scheduler = Defaults.scheduler[],
-        allocator = default_allocator(state, scheduler)
+        allocator = default_allocator(state, SerialScheduler())
     )
     checklattice(state, O)
     term_vals = dtmap(collect(O.terms)) do (inds, operator)  # OhMyThreads can't iterate over O.terms directly
@@ -102,16 +99,14 @@ function MPSKit.expectation_value(
         pf::InfinitePartitionFunction,
         op::Pair{CartesianIndex{2}, <:AbstractTensorMap{T, S, 2, 2}},
         env;
-        scheduler = Defaults.scheduler[],
-        allocator = default_allocator(pf, scheduler)
+        allocator = default_allocator(pf, SerialScheduler())
     ) where {T, S}
     return contract_local_tensor(op[1], op[2], env, allocator) /
         contract_local_tensor(op[1], pf[op[1]], env, allocator)
 end
 function MPSKit.expectation_value(
         pf::InfinitePartitionFunction, op::Pair{Tuple{Int, Int}}, env;
-        scheduler = Defaults.scheduler[],
-        allocator = default_allocator(pf, scheduler)
+        allocator = default_allocator(pf, SerialScheduler())
     )
-    return expectation_value(pf, CartesianIndex(op[1]) => op[2], env; scheduler, allocator)
+    return expectation_value(pf, CartesianIndex(op[1]) => op[2], env; allocator)
 end

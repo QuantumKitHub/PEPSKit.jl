@@ -217,8 +217,7 @@ function _rrule(
         envinit::AbstractCTMRGEnv,
         state,
         alg::CTMRGAlgorithm;
-        scheduler = Defaults.scheduler[],
-        allocator = default_allocator(state, scheduler)
+        allocator = default_allocator(state, SerialScheduler())
     )
     _check_algorithm_combination(alg, gradmode)
 
@@ -471,8 +470,7 @@ function _rrule(
         envinit::C4vCTMRGEnv,
         state,
         alg::C4vCTMRG;
-        scheduler = Defaults.scheduler[],
-        allocator = default_allocator(state, scheduler)
+        allocator = default_allocator(state, SerialScheduler())
     )
     _check_algorithm_combination(alg, gradmode)
 
@@ -622,8 +620,7 @@ function PEPSKit._rrule(
         envinit::AbstractCTMRGEnv,
         state,
         alg::SimultaneousCTMRG{<:HalfInfiniteProjector};
-        scheduler = Defaults.scheduler[],
-        allocator = default_allocator(state, scheduler)
+        allocator = default_allocator(state, SerialScheduler())
     )
     env, = leading_boundary(envinit, state, alg)
 
