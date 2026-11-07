@@ -52,7 +52,7 @@ import MPSKitModels:
     transverse_field_ising, heisenberg_XYZ, heisenberg_XXZ,
     hubbard_model, bose_hubbard_model, tj_model
 using FiniteDifferences
-using OhMyThreads: tmap, tmap!, SerialScheduler
+using OhMyThreads: tmap, tmapreduce, tmap!, SerialScheduler
 using DocStringExtensions
 
 include("Defaults.jl")  # Include first to allow for docstring interpolation with Defaults values

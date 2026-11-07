@@ -4,7 +4,7 @@
 # NOTE: currently restricted to 1x1, 2x1, and 1x2 patches, since evaluating larger patches
 # without including loop corrections tends to be a crude and not very useful appoximation.
 
-function _contract_densitymatrix(inds::NTuple{N, Val}, state, env::BPEnv) where {N}
+function _contract_densitymatrix(inds::NTuple{N, Val}, state, env::BPEnv, allocator) where {N}
     sites = _patch_inds(inds)
     return throw(
         ArgumentError(
@@ -15,7 +15,7 @@ function _contract_densitymatrix(inds::NTuple{N, Val}, state, env::BPEnv) where 
 end
 
 function reduced_densitymatrix1x1(
-        ind::CartesianIndex{2}, ket::InfinitePEPS, bra::InfinitePEPS, env::BPEnv
+        ind::CartesianIndex{2}, ket::InfinitePEPS, bra::InfinitePEPS, env::BPEnv, allocator
     )
     row, col = Tuple(ind)
     M_north = env[NORTH, row - 1, col]
@@ -23,7 +23,7 @@ function reduced_densitymatrix1x1(
     M_south = env[SOUTH, row + 1, col]
     M_west = env[WEST, row, col - 1]
 
-    @autoopt @tensor ρ[dt; db] :=
+    @autoopt @tensor allocator = allocator ρ[dt; db] :=
         ket[row, col][dt; DNt DEt DSt DWt] *
         conj(bra[row, col][db; DNb DEb DSb DWb]) *
         M_north[DNt; DNb] *
@@ -35,7 +35,7 @@ function reduced_densitymatrix1x1(
 end
 
 function reduced_densitymatrix2x1(
-        coord::CartesianIndex{2}, ket::InfinitePEPS, bra::InfinitePEPS, env::BPEnv
+        coord::CartesianIndex{2}, ket::InfinitePEPS, bra::InfinitePEPS, env::BPEnv, allocator
     )
     row, col = Tuple(coord)
     M_north = env[NORTH, row - 1, col]
@@ -45,7 +45,7 @@ function reduced_densitymatrix2x1(
     M_southwest = env[WEST, row + 1, col - 1]
     M_northwest = env[WEST, row, col - 1]
 
-    @autoopt @tensor ρ[dNt dSt; dNb dSb] :=
+    @autoopt @tensor allocator = allocator ρ[dNt dSt; dNb dSb] :=
         ket[row, col][dNt; DNt DNEt DMt DNWt] *
         ket[row + 1, col][dSt; DMt DSEt DSt DSWt] *
         conj(bra[row, col][dNb; DNb DNEb DMb DNWb]) *
@@ -61,7 +61,7 @@ function reduced_densitymatrix2x1(
 end
 
 function reduced_densitymatrix1x2(
-        coord::CartesianIndex{2}, ket::InfinitePEPS, bra::InfinitePEPS, env::BPEnv
+        coord::CartesianIndex{2}, ket::InfinitePEPS, bra::InfinitePEPS, env::BPEnv, allocator
     )
     row, col = Tuple(coord)
     M_west = env[WEST, row, col - 1]
@@ -75,7 +75,7 @@ function reduced_densitymatrix1x2(
     A_east = ket[row, col + 1]
     Ā_east = bra[row, col + 1]
 
-    @autoopt @tensor ρ[dWt dEt; dWb dEb] :=
+    @autoopt @tensor allocator = allocator ρ[dWt dEt; dWb dEb] :=
         A_west[dWt; DNWt DMt DSWt DWt] *
         A_east[dEt; DNEt DEt DSEt DMt] *
         conj(Ā_west[dWb; DNWb DMb DSWb DWb]) *

@@ -2,9 +2,9 @@
 # ------------------------
 
 @doc """
-    reduced_densitymatrix(inds, ket::InfinitePEPS, bra::InfinitePEPS = ket, env)
-    reduced_densitymatrix(inds, ket::InfinitePEPO, bra::InfinitePEPO, env)
-    reduced_densitymatrix(inds, state::InfinitePEPO, env)
+    reduced_densitymatrix(inds, ket::InfinitePEPS, bra::InfinitePEPS = ket, env, allocator)
+    reduced_densitymatrix(inds, ket::InfinitePEPO, bra::InfinitePEPO, env, allocator)
+    reduced_densitymatrix(inds, state::InfinitePEPO, env, allocator)
 
 Construct the reduced density matrix `ρ` of `|ket⟩⟨bra|`, where both `ket` and `bra`
 correspond to either a PEPS or a PEPO representing a PEPS with ancillary legs.
@@ -18,38 +18,38 @@ See also [`str`](@ref).
 
 # PEPS case has fast-path specializations
 function reduced_densitymatrix(
-        inds::Vector{CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env
+        inds::Vector{CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env, allocator
     )
-    length(inds) == 1 && return reduced_densitymatrix1x1(only(inds), ket, bra, env)
+    length(inds) == 1 && return reduced_densitymatrix1x1(only(inds), ket, bra, env, allocator)
 
     if length(inds) == 2
         if inds[2] - inds[1] == CartesianIndex(1, 0)
-            return reduced_densitymatrix2x1(inds[1], ket, bra, env)
+            return reduced_densitymatrix2x1(inds[1], ket, bra, env, allocator)
         elseif inds[2] - inds[1] == CartesianIndex(0, 1)
-            return reduced_densitymatrix1x2(inds[1], ket, bra, env)
+            return reduced_densitymatrix1x2(inds[1], ket, bra, env, allocator)
         end
     end
 
     static_inds = Tuple(Val.(inds))
-    return _contract_densitymatrix(static_inds, (ket, bra), env)
+    return _contract_densitymatrix(static_inds, (ket, bra), env, allocator)
 end
 function reduced_densitymatrix(
-        inds::Vector{CartesianIndex{2}}, state::InfinitePEPO, env
+        inds::Vector{CartesianIndex{2}}, state::InfinitePEPO, env, allocator
     )
     size(state, 3) == 1 || throw(DimensionMismatch("only single-layer densitymatrices are supported"))
     static_inds = Tuple(Val.(inds))
-    return _contract_densitymatrix(static_inds, state, env)
+    return _contract_densitymatrix(static_inds, state, env, allocator)
 end
 function reduced_densitymatrix(
-        inds::Vector{CartesianIndex{2}}, ket::InfinitePEPO, bra::InfinitePEPO, env
+        inds::Vector{CartesianIndex{2}}, ket::InfinitePEPO, bra::InfinitePEPO, env, allocator
     )
     size(ket) == size(bra) || throw(DimensionMismatch("incompatible bra and ket dimensions"))
     size(ket, 3) == 1 || throw(DimensionMismatch("only single-layer densitymatrices are supported"))
     static_inds = Tuple(Val.(inds))
-    return _contract_densitymatrix(static_inds, (ket, bra), env)
+    return _contract_densitymatrix(static_inds, (ket, bra), env, allocator)
 end
-reduced_densitymatrix(inds, ket::InfinitePEPS, env) =
-    reduced_densitymatrix(inds, ket, ket, env)
+reduced_densitymatrix(inds, ket::InfinitePEPS, env, allocator) =
+    reduced_densitymatrix(inds, ket, ket, env, allocator)
 
 # handle deprecations of Tuple inds specifications
 Base.@deprecate(
@@ -77,24 +77,24 @@ Base.@deprecate(
 # hand-optimized contraction actually pays off.
 
 """
-    reduced_densitymatrix1x1(ind, ket, bra, env)
+    reduced_densitymatrix1x1(ind, ket, bra, env, allocator)
 
 Construct the reduced density matrix of `|ket⟩⟨bra|` on the single site `ind`, using an
 optimized contraction for the environment `env`. Falls back to
 [`_contract_densitymatrix`](@ref) for environments without such a specialization.
 """
-reduced_densitymatrix1x1(ind, ket, bra, env) =
-    _contract_densitymatrix((Val(ind),), (ket, bra), env)
+reduced_densitymatrix1x1(ind, ket, bra, env, allocator) =
+    _contract_densitymatrix((Val(ind),), (ket, bra), env, allocator)
 
 """
-    reduced_densitymatrix2x1(ind, ket, bra, env)
+    reduced_densitymatrix2x1(ind, ket, bra, env, allocator)
 
 Construct the reduced density matrix of `|ket⟩⟨bra|` on the vertical pair of sites starting
 at `ind`, using an optimized contraction for the environment `env`. Falls back to
 [`_contract_densitymatrix`](@ref) for environments without such a specialization.
 """
-reduced_densitymatrix2x1(ind, ket, bra, env) =
-    _contract_densitymatrix((Val(ind), Val(ind + CartesianIndex(1, 0))), (ket, bra), env)
+reduced_densitymatrix2x1(ind, ket, bra, env, allocator) =
+    _contract_densitymatrix((Val(ind), Val(ind + CartesianIndex(1, 0))), (ket, bra), env, allocator)
 
 """
     reduced_densitymatrix1x2(ind, ket, bra, env)
@@ -103,5 +103,5 @@ Construct the reduced density matrix of `|ket⟩⟨bra|` on the horizontal pair 
 at `ind`, using an optimized contraction for the environment `env`. Falls back to
 [`_contract_densitymatrix`](@ref) for environments without such a specialization.
 """
-reduced_densitymatrix1x2(ind, ket, bra, env) =
-    _contract_densitymatrix((Val(ind), Val(ind + CartesianIndex(0, 1))), (ket, bra), env)
+reduced_densitymatrix1x2(ind, ket, bra, env, allocator) =
+    _contract_densitymatrix((Val(ind), Val(ind + CartesianIndex(0, 1))), (ket, bra), env, allocator)

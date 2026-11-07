@@ -233,6 +233,7 @@ function fixedpoint(
         (finalize!) = OptimKit._finalize!,
         hasconverged = OptimKit.DefaultHasConverged(alg.optimizer_alg.gradtol),
         shouldstop = OptimKit.DefaultShouldStop(alg.optimizer_alg.maxiter),
+        allocator = default_allocator(peps₀, SerialScheduler())
     )
     # validate inputs
     check_input(fixedpoint, peps₀, env₀, alg)
@@ -275,7 +276,7 @@ function fixedpoint(
                 alg.precondition_alg;
                 iter = tracked_finalizer.tol_state.iter, g_global = tracked_finalizer.tol_state.gradnorm
             )
-            g_prec = peps_precondition(x, g, tracked_finalizer.tol_state, precondition_alg)
+            g_prec = peps_precondition(x, g, tracked_finalizer.tol_state, precondition_alg, allocator)
             return peps_project_tangent(g_prec, x[1])
         end
     end
@@ -301,6 +302,7 @@ function fixedpoint(
             env′, info = hook_pullback(
                 leading_boundary, env, ψ, boundary_alg;
                 alg_rrule = gradient_alg,
+                allocator = allocator
             )
             ignore_derivatives() do
                 alg.reuse_env && update!(env, env′)

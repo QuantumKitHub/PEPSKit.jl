@@ -3,7 +3,7 @@ using Random
 using PEPSKit
 using TensorKit
 using Adapt
-using PEPSKit: ctmrg_iteration, calc_elementwise_convergence
+using PEPSKit: default_allocator, SerialScheduler, ctmrg_iteration, calc_elementwise_convergence
 using PEPSKit: ScramblingEnvGauge
 using PEPSKit: peps_normalize
 
@@ -98,9 +98,10 @@ function ctmrg_gaugefix_asymmetric(AT; minimal::Bool = false)
         psi = adapt(AT, psi)
         env_pre = adapt(AT, env_pre)
         n = InfiniteSquareNetwork(psi)
+        allocator = default_allocator(n, SerialScheduler())
         env, = leading_boundary(env_pre, psi, alg)
-        env′, = ctmrg_iteration(n, env, alg)
-        env_fixed = gauge_fix(env′, env, gauge_alg)
+        env′, = ctmrg_iteration(n, env, alg, allocator)
+        env_fixed = gauge_fix(env′, env, gauge_alg, allocator)
         env_diff = calc_elementwise_convergence(env, env_fixed)
         @info "Diff between iters = $(env_diff)"
         @test env_diff ≈ 0 atol = atol
@@ -119,9 +120,10 @@ function ctmrg_gaugefix_c4v(AT; minimal::Bool = false)
         psi = adapt(AT, psi)
         env_pre = adapt(AT, env_pre)
         n = InfiniteSquareNetwork(psi)
+        allocator = default_allocator(n, SerialScheduler())
         env, = leading_boundary(env_pre, psi, alg)
-        env′, = ctmrg_iteration(n, env, alg)
-        env_fixed = gauge_fix(env′, env, gauge_alg)
+        env′, = ctmrg_iteration(n, env, alg, allocator)
+        env_fixed = gauge_fix(env′, env, gauge_alg, allocator)
         env_diff = calc_elementwise_convergence(env, env_fixed)
         @info "Diff between iters = $(env_diff)"
         @test env_diff ≈ 0 atol = atol

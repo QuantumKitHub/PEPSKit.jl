@@ -43,11 +43,11 @@ function CTMRGAlgorithm(;
 end
 
 """
-    ctmrg_iteration(network, env, alg::CTMRGAlgorithm) -> env′, info
+    ctmrg_iteration(network, env, alg::CTMRGAlgorithm, allocator) -> env′, info
 
 Perform a single CTMRG iteration in which all directions are being grown and renormalized.
 """
-function ctmrg_iteration(network, env, alg::CTMRGAlgorithm) end
+function ctmrg_iteration(network, env, alg::CTMRGAlgorithm, allocator) end
 
 """
     leading_boundary(env₀, network; kwargs...) -> env, info
@@ -106,7 +106,8 @@ function leading_boundary(env₀::AbstractCTMRGEnv, network::InfiniteSquareNetwo
     return leading_boundary(env₀, network, alg)
 end
 function leading_boundary(
-        env₀::AbstractCTMRGEnv, network::InfiniteSquareNetwork, alg::CTMRGAlgorithm
+        env₀::AbstractCTMRGEnv, network::InfiniteSquareNetwork, alg::CTMRGAlgorithm;
+        allocator = default_allocator(network, SerialScheduler())
     )
     check_input(leading_boundary, network, env₀, alg)
     log = ignore_derivatives(() -> MPSKit.IterLog("CTMRG"))
@@ -116,23 +117,23 @@ function leading_boundary(
             return corner_spectra(first(convergence_tensors(env₀, alg)), alg), nothing
         end
         η = one(real(scalartype(network)))
-        ctmrg_loginit!(log, η, network, env₀)
+        ctmrg_loginit!(log, η, network, env₀, allocator)
         local info_iter
         converged = false
         for iter in 1:(alg.maxiter)
             env_prev = env
-            env, info_iter = ctmrg_iteration(network, env, alg)
+            env, info_iter = ctmrg_iteration(network, env, alg, allocator)
             η, CS, TS = calc_convergence_lazy(env, env_prev, CS, TS, alg; exact = iter == alg.maxiter)
 
             if η ≤ alg.tol && iter ≥ alg.miniter
-                ctmrg_logfinish!(log, iter, η, network, env)
+                ctmrg_logfinish!(log, iter, η, network, env, allocator)
                 converged = true
                 break
             end
             if iter == alg.maxiter
-                ctmrg_logcancel!(log, iter, η, network, env)
+                ctmrg_logcancel!(log, iter, η, network, env, allocator)
             else
-                ctmrg_logiter!(log, iter, η, network, env, isnothing(TS))
+                ctmrg_logiter!(log, iter, η, network, env, allocator, isnothing(TS))
             end
         end
         info = (;
@@ -156,21 +157,21 @@ function check_input(::typeof(leading_boundary), network, env, alg::CTMRGAlgorit
 @non_differentiable check_input(args...)
 
 # custom CTMRG logging
-function ctmrg_loginit!(log, η, network, env)
-    return @log_initialization loginit!(log, η, network_value(network, env))
+function ctmrg_loginit!(log, η, network, env, allocator)
+    return @log_initialization loginit!(log, η, network_value(network, env, allocator))
 end
-function ctmrg_logiter!(log, iter, η, network, env, lower_bound::Bool = false)
+function ctmrg_logiter!(log, iter, η, network, env, allocator, lower_bound::Bool = false)
     return @log_iteration _iterlog_message(
-        logiter!(log, iter, η, network_value(network, env)), lower_bound
+        logiter!(log, iter, η, network_value(network, env, allocator)), lower_bound
     )
 end
 _iterlog_message(log, lower_bound::Bool) =
     lower_bound ? replace(sprint(show, log), "err = " => "err ≥ ") : log
-function ctmrg_logfinish!(log, iter, η, network, env)
-    return @log_convergence logfinish!(log, iter, η, network_value(network, env))
+function ctmrg_logfinish!(log, iter, η, network, env, allocator)
+    return @log_convergence logfinish!(log, iter, η, network_value(network, env, allocator))
 end
-function ctmrg_logcancel!(log, iter, η, network, env)
-    return @log_nonconvergence logcancel!(log, iter, η, network_value(network, env))
+function ctmrg_logcancel!(log, iter, η, network, env, allocator)
+    return @log_nonconvergence logcancel!(log, iter, η, network_value(network, env, allocator))
 end
 
 @non_differentiable ctmrg_loginit!(args...)

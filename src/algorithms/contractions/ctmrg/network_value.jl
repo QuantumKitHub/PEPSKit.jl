@@ -10,9 +10,9 @@ function _contract_site(
         C_northwest, C_northeast, C_southeast, C_southwest,
         E_north::CTMRG_PEPS_EdgeTensor, E_east::CTMRG_PEPS_EdgeTensor,
         E_south::CTMRG_PEPS_EdgeTensor, E_west::CTMRG_PEPS_EdgeTensor,
-        O::PEPSSandwich,
+        O::PEPSSandwich, allocator
     )
-    return @autoopt @tensor E_west[χ_WSW D_W_above D_W_below; χ_WNW] *
+    return @autoopt @tensor allocator = allocator E_west[χ_WSW D_W_above D_W_below; χ_WNW] *
         C_northwest[χ_WNW; χ_NNW] *
         E_north[χ_NNW D_N_above D_N_below; χ_NNE] *
         C_northeast[χ_NNE; χ_ENE] *
@@ -27,9 +27,9 @@ function _contract_site(
         C_northwest, C_northeast, C_southeast, C_southwest,
         E_north::CTMRG_PF_EdgeTensor, E_east::CTMRG_PF_EdgeTensor,
         E_south::CTMRG_PF_EdgeTensor, E_west::CTMRG_PF_EdgeTensor,
-        O::PFTensor,
+        O::PFTensor, allocator
     )
-    return @autoopt @tensor E_west[χ_WSW D_W; χ_WNW] *
+    return @autoopt @tensor allocator = allocator E_west[χ_WSW D_W; χ_WNW] *
         C_northwest[χ_WNW; χ_NNW] *
         E_north[χ_NNW D_N; χ_NNE] *
         C_northeast[χ_NNE; χ_ENE] *
@@ -43,7 +43,7 @@ end
 @generated function _contract_site(
         C_northwest, C_northeast, C_southeast, C_southwest,
         E_north::TE, E_east::TE, E_south::TE, E_west::TE,
-        O::PEPOSandwich{H},
+        O::PEPOSandwich{H}, allocator
     ) where {TE <: CTMRGEdgeTensor, H}
     @assert numout(TE) == H + 3
 
@@ -67,15 +67,15 @@ end
         pepo_es...,
     )
 
-    return macroexpand(@__MODULE__, :(return @autoopt @tensor $rhs))
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor allocator = allocator $rhs))
 end
 
 """
-    _contract_site(ind::Tuple{Int,Int}, network::InfiniteSquareNetwork, env::AbstractCTMRGEnv)
+    _contract_site(ind::Tuple{Int,Int}, network::InfiniteSquareNetwork, env::AbstractCTMRGEnv, allocator)
 
 Contract around a single site `ind` of a square network using a given CTMRG environment.
 """
-function _contract_site(ind::Tuple{Int, Int}, network::InfiniteSquareNetwork, env::CTMRGEnv)
+function _contract_site(ind::Tuple{Int, Int}, network::InfiniteSquareNetwork, env::CTMRGEnv, allocator)
     r, c = ind
     return _contract_site(
         corner(env, NORTHWEST, r - 1, c - 1),
@@ -84,11 +84,11 @@ function _contract_site(ind::Tuple{Int, Int}, network::InfiniteSquareNetwork, en
         corner(env, SOUTHWEST, r + 1, c - 1),
         edge(env, NORTH, r - 1, c), edge(env, EAST, r, c + 1),
         edge(env, SOUTH, r + 1, c), edge(env, WEST, r, c - 1),
-        network[r, c],
+        network[r, c], allocator
     )
 end
 
-function _contract_site(ind::Tuple{Int, Int}, network::InfiniteSquareNetwork, env::C4vCTMRGEnv)
+function _contract_site(ind::Tuple{Int, Int}, network::InfiniteSquareNetwork, env::C4vCTMRGEnv, allocator)
     r, c = ind
     @assert r == c == 1 lazy"only trivial unit cells are supported for C4v-CTMRG, ind ($ind) must be (1, 1)"
     return _contract_site(
@@ -98,7 +98,7 @@ function _contract_site(ind::Tuple{Int, Int}, network::InfiniteSquareNetwork, en
         corner(env, SOUTHWEST, r + 1, c - 1),
         edge(env, NORTH, r - 1, c), edge(env, EAST, r, c + 1),
         edge(env, SOUTH, r + 1, c), edge(env, WEST, r, c - 1),
-        network[r, c],
+        network[r, c], allocator,
     )
 end
 
@@ -106,24 +106,26 @@ end
 function _contract_corners(
         C_northwest::CTMRGCornerTensor, C_northeast::CTMRGCornerTensor,
         C_southeast::CTMRGCornerTensor, C_southwest::CTMRGCornerTensor,
+        allocator,
     )
-    return @tensor C_northwest[1; 2] * C_northeast[2; 3] *
+    return @tensor allocator = allocator C_northwest[1; 2] * C_northeast[2; 3] *
         C_southeast[3; 4] * C_southwest[4; 1]
 end
 
 """
-    _contract_corners(ind::Tuple{Int,Int}, env::CTMRGEnv)
+    _contract_corners(ind::Tuple{Int,Int}, env::CTMRGEnv, allocator)
 
 Contract all corners around the south-east at position `ind` of the CTMRG
 environment `env`.
 """
-function _contract_corners(ind::Tuple{Int, Int}, env::AbstractCTMRGEnv)
+function _contract_corners(ind::Tuple{Int, Int}, env::AbstractCTMRGEnv, allocator)
     r, c = ind
     return _contract_corners(
         corner(env, NORTHWEST, r - 1, c - 1),
         corner(env, NORTHEAST, r - 1, c),
         corner(env, SOUTHEAST, r, c),
         corner(env, SOUTHWEST, r, c - 1),
+        allocator,
     )
 end
 
@@ -132,6 +134,7 @@ end
         C_southeast::CTMRGCornerTensor, C_southwest::CTMRGCornerTensor,
         E_east::CTMRGEdgeTensor{T, S, N},
         E_west::CTMRGEdgeTensor{T, S, N},
+        allocator,
     ) where {T, S, N}
     C_northwest_e = tensorexpr(:C_northwest, (envlabel(:NW),), (envlabel(:N),))
     C_northeast_e = tensorexpr(:C_northeast, (envlabel(:N),), (envlabel(:NE),))
@@ -150,7 +153,7 @@ end
         E_west_e, C_northwest_e, C_northeast_e, E_east_e, C_southeast_e, C_southwest_e,
     )
 
-    return macroexpand(@__MODULE__, :(return @autoopt @tensor $rhs))
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor allocator = allocator $rhs))
 end
 
 """
@@ -159,7 +162,7 @@ end
 Contract the vertical edges and corners around the east edge at position `ind` of the
 CTMRG environment `env`.
 """
-function _contract_vertical_edges(ind::Tuple{Int, Int}, env::AbstractCTMRGEnv)
+function _contract_vertical_edges(ind::Tuple{Int, Int}, env::AbstractCTMRGEnv, allocator)
     r, c = ind
     return _contract_vertical_edges(
         corner(env, NORTHWEST, r - 1, c - 1),
@@ -168,6 +171,7 @@ function _contract_vertical_edges(ind::Tuple{Int, Int}, env::AbstractCTMRGEnv)
         corner(env, SOUTHWEST, r + 1, c - 1),
         edge(env, EAST, r, c),
         edge(env, WEST, r, c - 1),
+        allocator
     )
 end
 
@@ -175,6 +179,7 @@ end
         C_northwest::CTMRGCornerTensor, C_northeast::CTMRGCornerTensor,
         C_southeast::CTMRGCornerTensor, C_southwest::CTMRGCornerTensor,
         E_north::CTMRGEdgeTensor{T, S, N}, E_south::CTMRGEdgeTensor{T, S, N},
+        allocator,
     ) where {T, S, N}
     C_northwest_e = tensorexpr(:C_northwest, (envlabel(:W),), (envlabel(:NW),))
     C_northeast_e = tensorexpr(:C_northeast, (envlabel(:NE),), (envlabel(:E),))
@@ -193,16 +198,16 @@ end
         C_northwest_e, E_north_e, C_northeast_e, C_southeast_e, E_south_e, C_southwest_e,
     )
 
-    return macroexpand(@__MODULE__, :(return @autoopt @tensor $rhs))
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor allocator = allocator $rhs))
 end
 
 """
-    _contract_horizontal_edges(ind::Tuple{Int,Int}, env::CTMRGEnv)
+    _contract_horizontal_edges(ind::Tuple{Int,Int}, env::CTMRGEnv, allocator)
 
 Contract the horizontal edges and corners around the south edge at position `ind` of the
 CTMRG environment `env`.
 """
-function _contract_horizontal_edges(ind::Tuple{Int, Int}, env::AbstractCTMRGEnv)
+function _contract_horizontal_edges(ind::Tuple{Int, Int}, env::AbstractCTMRGEnv, allocator)
     r, c = ind
     return _contract_horizontal_edges(
         corner(env, NORTHWEST, r - 1, c - 1),
@@ -211,5 +216,6 @@ function _contract_horizontal_edges(ind::Tuple{Int, Int}, env::AbstractCTMRGEnv)
         corner(env, SOUTHWEST, r, c - 1),
         edge(env, NORTH, r - 1, c),
         edge(env, SOUTH, r, c),
+        allocator,
     )
 end
