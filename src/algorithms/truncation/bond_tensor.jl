@@ -1,6 +1,14 @@
 "Reduced bond factor `R[q; physical bond]`, with one outgoing and two incoming legs."
 const ReducedBondTensor{T, S} = AbstractTensorMap{T, S, 1, 2}
 
+function _bond_tensor_axes(axes::Tuple, dir, gate_ax)
+    Np = length(axes) - 4
+    @assert 1 <= dir <= 4
+    @assert 1 <= gate_ax <= Np
+    reduced = (gate_ax, Np + dir)
+    return TupleTools.deleteat(axes, reduced), reduced
+end
+
 """
     bond_tensor_end(A, dir; gate_ax = 1, allocator = DefaultAllocator(), kwargs...)
 
@@ -17,23 +25,17 @@ For a PEPS tensor `A` with `dir = EAST`, `gate_ax = 1`:
 ```
 """
 function bond_tensor_end(A::AbstractTensorMap{T, S, Np, 4}, dir::Int; gate_ax::Integer = 1, allocator = DefaultAllocator(), kwargs...) where {T, S, Np}
-    @assert 1 <= dir <= 4
-    @assert 1 <= gate_ax <= Np
-    reduced = (gate_ax, Np + dir)
-    open = TupleTools.deleteat(ntuple(identity, numind(A)), reduced)
+    open, reduced = _bond_tensor_axes(allind(A), dir, gate_ax)
     partition = (open, reduced)
     cp = allocator_checkpoint!(allocator)
     A′ = tensoralloc_add(scalartype(A), A, partition, false, Val(true), allocator)
-    X, R = try
-        tensoradd!(A′, A, partition, false, One(), Zero(), DefaultBackend(), allocator)
-        left_orth!(A′; kwargs...)
-    finally
-        tensorfree!(A′, allocator)
-        allocator_reset!(allocator, cp)
-    end
-    virtual = TupleTools.insertafter(ntuple(i -> Np - 1 + i, 3), dir - 1, (Np + 3,))
+    tensoradd!(A′, A, partition, false, One(), Zero(), DefaultBackend(), allocator)
+    X, R = left_orth!(A′; kwargs...)
+    tensorfree!(A′, allocator)
+    allocator_reset!(allocator, cp)
+    order = TupleTools.insertafter(codomainind(X), Np + dir - 2, domainind(X))
     # TODO: can we cleanly avoid this?
-    X = permute(X, (ntuple(identity, Np - 1)..., virtual...))
+    X = permute(X, order)
     return X, R
 end
 
@@ -43,24 +45,21 @@ end
 Undo `bond_tensor_end`, reconstructing directly in the original frame.
 `R` has layout `R[q; physical bond]`; `X` and the result use the original frame.
 """
-function undo_bond_tensor_end(R::ReducedBondTensor, X::AbstractTensor, dir::Int; gate_ax::Integer = 1, allocator = DefaultAllocator())
-    @assert 1 <= dir <= 4
-    Np, N = numind(X) - 3, numind(X)
-    @assert 1 <= gate_ax <= Np
+function undo_bond_tensor_end(R::ReducedBondTensor, X::AbstractTensorMap, dir::Int; gate_ax::Integer = 1, allocator = DefaultAllocator())
+    Np = numind(X) - 3
+    open, reduced = _bond_tensor_axes(ntuple(identity, Np + 4), dir, gate_ax)
     contracted = Np - 1 + dir
-    free = TupleTools.deleteat(ntuple(identity, N), contracted)
-    physical = TupleTools.insertafter(ntuple(identity, Np - 1), gate_ax - 1, (Np + 3,))
-    virtual = TupleTools.insertafter(ntuple(i -> Np - 1 + i, 3), dir - 1, (Np + 4,))
-    output = (physical, virtual)
+    free = TupleTools.deleteat(allind(X), contracted)
+    # Restore the original axes from the contraction's (open..., physical, bond) order.
+    order = invperm((open..., reduced...))
+    output = (order[1:Np], order[(Np + 1):end])
     cp = allocator_checkpoint!(allocator)
-    try
-        return tensorcontract(
-            X, (free, (contracted,)), false, R, ((1,), (2, 3)), false,
-            output, One(), DefaultBackend(), allocator
-        )
-    finally
-        allocator_reset!(allocator, cp)
-    end
+    A = tensorcontract(
+        X, (free, (contracted,)), false, R, ((1,), (2, 3)), false,
+        output, One(), DefaultBackend(), allocator
+    )
+    allocator_reset!(allocator, cp)
+    return A
 end
 
 """
@@ -93,7 +92,6 @@ Reconstruct a middle tensor with `undo_bond_tensor_end`, then remove the trivial
 physical leg introduced by `bond_tensor_mid`.
 """
 function undo_bond_tensor_mid(R::ReducedBondTensor, X::Union{PEPSTensor, PEPOTensor}, dir::Int; allocator = DefaultAllocator())
-    X = permute(X, ntuple(identity, numind(X)))
     A = undo_bond_tensor_end(R, X, dir; allocator)
     return removeunit(A, Val(1))
 end
