@@ -7,16 +7,16 @@
 Return the value (per unit cell) of a given contractible network contracted using a given
 CTMRG environment.
 """
-function network_value(network::InfiniteSquareNetwork, env::AbstractCTMRGEnv, allocator; scheduler = Defaults.scheduler[])
-    return tmapreduce(*, Iterators.product(axes(network)...); scheduler) do (r, c)
+function network_value(network::InfiniteSquareNetwork, env::AbstractCTMRGEnv, allocator)
+    return prod(Iterators.product(axes(network)...)) do (r, c)
         return _contract_site((r, c), network, env, allocator) * _contract_corners((r, c), env, allocator) /
             _contract_vertical_edges((r, c), env, allocator) / _contract_horizontal_edges((r, c), env, allocator)
     end
 end
-network_value(state, env::AbstractCTMRGEnv, allocator; kwargs...) = network_value(InfiniteSquareNetwork(state), env, allocator; kwargs...)
+network_value(state, env::AbstractCTMRGEnv, allocator) = network_value(InfiniteSquareNetwork(state), env, allocator)
 
-function LinearAlgebra.norm(peps::InfinitePEPS, env::AbstractCTMRGEnv; scheduler = Defaults.scheduler[], allocator = default_allocator(peps, scheduler))
-    return network_value(InfiniteSquareNetwork(peps), env, allocator; scheduler)
+function LinearAlgebra.norm(peps::InfinitePEPS, env::AbstractCTMRGEnv; allocator = default_allocator(peps, SerialScheduler()))
+    return network_value(InfiniteSquareNetwork(peps), env, allocator)
 end
 
 # Local tensor insertions
