@@ -227,98 +227,90 @@ function _rrule(
     alg_gauge = _scrambling_env_gauge(alg) # select appropriate gauge-fixing algorithm
     env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
     signs, = compute_gauge_fix_gauge(env_conv, env, alg_gauge)
-    # fix global phases relative to the fixed point inside the iteration
-    function gauge_fixed_iteration(A, x)
+    # `p` for state, `x` for environment
+    function gauge_fixed_iteration(p, x)
+        # fix global phases relative to the fixed point inside the iteration
         return fix_global_phases(
-            fix_relative_phases(ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1], signs),
+            fix_relative_phases(ctmrg_iteration(InfiniteSquareNetwork(p), x, alg_fixed)[1], signs),
             env,
         )
     end
     # prepare its pullback
-    _, env_vjp = rrule_via_ad(config, gauge_fixed_iteration, state, env)
-    # split off state and environment parts
-    ∂f∂A(x)::typeof(state) = env_vjp(x)[2]
-    ∂f∂x(x)::typeof(env) = env_vjp(x)[3]
+    _, pullback = rrule_via_ad(config, gauge_fixed_iteration, state, env)
+    ∂f(y)::Tuple{Any, typeof(state), typeof(env)} = pullback(y)
+
+    # TODO: try partial-argument VJPs after Enzyme support is added.
+    # fₚ = Base.Fix1(gauge_fixed_iteration, state) # fix state `p`
+    # fₓ = Base.Fix2(gauge_fixed_iteration, env)   # fix environment `x`
 
     function leading_boundary_fixed_pullback((Δenv′, Δinfo))
         Δenv = unthunk(Δenv′)
-
-        # evaluate the geometric sum
-        ∂F∂env = fixedpoint_gradient(Δenv, ∂f∂x, ∂f∂A, Δenv, gradmode.solver_alg)
-
-        return NoTangent(), ZeroTangent(), ∂F∂env, NoTangent()
+        # evaluate the fixed-point gradient
+        ∂E∂env = fixedpoint_gradient(Δenv, ∂f, Δenv, gradmode.solver_alg)
+        return NoTangent(), ZeroTangent(), ∂E∂env, NoTangent()
     end
 
     return (env, info), leading_boundary_fixed_pullback
 end
 
 @doc raw"""
-    fixedpoint_gradient(x̆, ∂ₓf, ∂ₚf, y₀, alg)
+    fixedpoint_gradient(x̆, ∂f, y₀, alg)
 
-Evaluates the VJP action  ``x̆ ∂ₚx`` for an intermediate variable ``x \equiv x(p)``
-which satisfies the fixed-point equation ``x = f(x, p)``, given the VJP actions ``∂ₓf``
-and ``∂ₚf`` of the iterating function ``f``.
+Given the iteration function ``f(p, x)``, with ``p`` as parameters and ``x \equiv x(p)`` as the solution of the fixed-point equation ``x = f(p, x)``, evaluates the VJP action ``x̆ ∂ₚx``, where ``x̆`` is a covector.
 
-More specifically, given a cost function ``E(x(p), p)`` defined in terms of a set of
-variational parameters ``p`` and a set of intermediate variables ``x`` that depend on ``p``,
-``x \equiv x(p)``, the gradient of the cost function is given by
+In the context of cost function ``E(p, x(p))`` optimization, let ``x̆ = ∂ₓE``, ``p̆ = ∂ₚE``.
+The gradient of the cost function is given by
 
 ```math
-dE/dp = ∂ₓE ∂ₚx + ∂ₚE.
+dE/dp = x̆ ∂ₚx + p̆.
 ```
 
-Given the fixed-point equation ``x = f(x, p)``, the VJP action of the Jacobian ``∂ₚx``` on
-the adjoint ``x̆ = ∂ₓE`` in the first term of this expression can be evaluated through
-implicit differentiation of the fixed-point condition as
+Implicit differentiation of the fixed-point equation gives
+
 ```math
-x̆ ∂ₚx = x̆ (1 - ∂ₓf)⁻¹ ∂ₚf = ∑ₙ x̆ (∂ₓf)ⁿ ∂ₚf.
+x̆ ∂ₚx = y ∂ₚf, \quad y = x̆ (1 - ∂ₓf)⁻¹ = ∑ₙ x̆ (∂ₓf)ⁿ.
 ```
 
-This can be used to differentiate contraction routines, where ``p`` are the variational
-parameters of a tensor network, ``x̆ = ∂ₓE`` is the partial
-derivative of the cost function with respect to the contraction environment ``x``, and ``f``
-is a single iteration of the contraction algorithm.
+- The second and third components of the pullback `∂f(y)` are the VJP actions ``y ∂ₚf`` and ``y ∂ₓf``, respectively. The first component is ignored.
+- `alg` is the algorithm to solve ``y`` from the equation ``y (1 - ∂ₓf) = x̆``, with initial guess `y₀` (unused by `GeomSum` algorithm).
+- The contribution ``p̆ = ∂ₚE`` in ``dE/dp`` should be added separately.
+
+For tensor-network contraction, ``p`` are the variational parameters, ``x`` is the contraction environment, and ``f`` is one iteration of the contraction algorithm.
 """
 fixedpoint_gradient
 
-# TODO: can we construct an implementation that does not need to evaluate the vjp
-# twice if both ∂f∂A and ∂f∂x are needed?
-function fixedpoint_gradient(∂E∂x, ∂f∂x, ∂f∂A, _, alg::GeomSum)
-    g = ∂E∂x
-    dx = ∂f∂A(g) # n = 0 term: ∂F∂x ∂f∂A
+function fixedpoint_gradient(∂E∂x, ∂f, _, alg::GeomSum)
+    _, dx, g = ∂f(∂E∂x) # i = 0 term: ∂E∂x ∂f∂p
     ϵ = 2 * alg.tol
     for i in 1:(alg.maxiter)
-        g = ∂f∂x(g)
-        Σₙ = ∂f∂A(g)
-        dx += Σₙ
-        ϵnew = norm(Σₙ)  # TODO: normalize this error?
+        _, Σᵢ, g = ∂f(g)
+        dx += Σᵢ
+        ϵnew = norm(Σᵢ)  # TODO: normalize this error?
         Δϵ = ϵ - ϵnew
         alg.verbosity > 1 &&
-            @printf("Gradient iter: %3d   ‖Σₙ‖: %.2e   Δ‖Σₙ‖: %.2e\n", i, ϵnew, Δϵ)
+            @printf("Gradient iter: %3d   ‖Σᵢ‖: %.2e   Δ‖Σᵢ‖: %.2e\n", i, ϵnew, Δϵ)
         ϵ = ϵnew
 
         ϵ < alg.tol && break
         if alg.verbosity > 0 && i == alg.maxiter
-            @warn "gradient fixed-point iteration reached maximal number of iterations at ‖Σₙ‖ = $ϵ"
+            @warn "gradient fixed-point iteration reached maximal number of iterations at ‖Σᵢ‖ = $ϵ"
         end
     end
     return dx
 end
 
-function fixedpoint_gradient(∂E∂x, ∂f∂x, ∂f∂A, y₀, alg::ManualIter)
+function fixedpoint_gradient(∂E∂x, ∂f, y₀, alg::ManualIter)
     y = deepcopy(y₀)  # Do not mutate y₀
-    dx = ∂f∂A(y)
+    _, dx, dy = ∂f(y)
     ϵ = 1.0
     for i in 1:(alg.maxiter)
-        y′ = ∂E∂x + ∂f∂x(y)
-
-        dxnew = ∂f∂A(y′)
+        y′ = ∂E∂x + dy
+        _, dxnew, dy = ∂f(y′)
         ϵnew = norm(dxnew - dx)
         Δϵ = ϵ - ϵnew
         alg.verbosity > 1 && @printf(
             "Gradient iter: %3d   ‖Cᵢ₊₁-Cᵢ‖/N: %.2e   Δ‖Cᵢ₊₁-Cᵢ‖/N: %.2e\n", i, ϵnew, Δϵ
         )
-        y = y′
         dx = dxnew
         ϵ = ϵnew
 
@@ -330,35 +322,38 @@ function fixedpoint_gradient(∂E∂x, ∂f∂x, ∂f∂A, y₀, alg::ManualIter
     return dx
 end
 
-function fixedpoint_gradient(∂E∂x, ∂f∂x, ∂f∂A, y₀, alg::KrylovKit.LinearSolver)
+function fixedpoint_gradient(∂E∂x, ∂f, y₀, alg::KrylovKit.LinearSolver)
+    ∂f∂p(x) = ∂f(x)[2]
+    ∂f∂x(x) = ∂f(x)[3]
     y, info = reallinsolve(∂f∂x, ∂E∂x, y₀, alg, 1, -1)
     if alg.verbosity > 0 && info.converged != 1
         @warn("gradient fixed-point iteration reached maximal number of iterations:", info)
     end
-
-    return ∂f∂A(y)
+    return ∂f∂p(y)
 end
 
-function fixedpoint_gradient(∂E∂x, ∂f∂x, ∂f∂A, x₀, alg::KrylovKit.KrylovAlgorithm)
-    function f(X)
-        y = ∂f∂x(X[1])
-        return (VI.add!!(y, ∂E∂x, X[2]), X[2])
+function fixedpoint_gradient(∂E∂x, ∂f, y₀, alg::KrylovKit.KrylovAlgorithm)
+    ∂f∂p(x) = ∂f(x)[2]
+    ∂f∂x(x) = ∂f(x)[3]
+    function augmented_map(Y)
+        local y, s = Y
+        return (VI.add!!(∂f∂x(y), ∂E∂x, s), s)
     end
-    X₀ = (x₀, one(scalartype(x₀)))
-    _, vecs, info = realeigsolve(f, X₀, 1, :LM, alg)
+    Y₀ = (y₀, one(scalartype(y₀)))
+    _, Ys, info = realeigsolve(augmented_map, Y₀, 1, :LM, alg)
     if alg.verbosity > 0 && info.converged < 1
         @warn("gradient fixed-point iteration reached maximal number of iterations:", info)
     end
-    if norm(vecs[1][2]) < 1.0e-2 * alg.tol
-        @warn "Fixed-point gradient computation using Arnoldi failed:\n\tauxiliary component should be finite but was $(vecs[1][2])\n\tpossibly the Jacobian does not have a unique eigenvalue 1"
+    y, s = first(Ys)
+    if norm(s) < 1.0e-2 * alg.tol
+        @warn "Fixed-point gradient computation using Arnoldi failed:\n\tauxiliary component should be finite but was $(s)\n\tpossibly the Jacobian does not have a unique eigenvalue 1"
         @info "Falling back to linear solver for fixed-point gradient computation."
         backup_ls_alg = GMRES(; tol = alg.tol, maxiter = alg.maxiter, verbosity = alg.verbosity)
-        return fixedpoint_gradient(∂E∂x, ∂f∂x, ∂f∂A, x₀, backup_ls_alg)
+        return fixedpoint_gradient(∂E∂x, ∂f, y₀, backup_ls_alg)
     else
-        y = VI.scale!!(vecs[1][1], inv(vecs[1][2]))
+        y = VI.scale!!(y, inv(s))
     end
-
-    return ∂f∂A(y)
+    return ∂f∂p(y)
 end
 
 #
@@ -430,11 +425,11 @@ end
 @doc raw"""
     implicit_gradient(x̆, ∂ₓF, ∂ₚF, y₀, alg)
 
-Evaluates the VJP action  ``x̆ ∂ₚx`` for an intermediate variable ``x \equiv x(p)``
-which satisfies the characteristic equation ``F(x, p) = 0``, given the VJP actions ``∂ₓF``
+Evaluates the VJP action ``x̆ ∂ₚx`` for an intermediate variable ``x \equiv x(p)``
+which satisfies the characteristic equation ``F(p, x) = 0``, given the VJP actions ``∂ₓF``
 and ``∂ₚF`` of the function ``F`` encoding the characteristic equation.
 
-More specifically, given a cost function ``E(x(p), p)`` defined in terms of a set of
+More specifically, given a cost function ``E(p, x(p))`` defined in terms of a set of
 variational parameters ``p`` and a set of intermediate variables ``x`` that depend on ``p``,
 ``x \equiv x(p)``, the gradient of the cost function is given by
 
@@ -442,7 +437,7 @@ variational parameters ``p`` and a set of intermediate variables ``x`` that depe
 dE/dp = ∂ₓE ∂ₚx + ∂ₚE.
 ```
 
-Given the characteristic equation ``F(x, p) = 0``, the VJP action of the Jacobian ``∂ₚx``` on
+Given the characteristic equation ``F(p, x) = 0``, the VJP action of the Jacobian ``∂ₚx``` on
 the adjoint ``x̆ = ∂ₓE`` in the first term of this expression can be evaluated through
 implicit differentiation of the characteristic equation as
 ```math
@@ -456,13 +451,13 @@ is an algebraic function characterizing the convergence of the algorithm.
 """
 implicit_gradient
 
-function implicit_gradient(∂E∂x, ∂F∂x, ∂F∂A, y₀, alg::KrylovKit.LinearSolver)
+function implicit_gradient(∂E∂x, ∂F∂x, ∂F∂p, y₀, alg::KrylovKit.LinearSolver)
     y, info = reallinsolve(∂F∂x, ∂E∂x, y₀, alg)
     if alg.verbosity > 0 && info.converged != 1
         @warn("Implicit gradient linear solve reached maximal number of iterations:", info)
     end
 
-    return (-1) * ∂F∂A(y)
+    return (-1) * ∂F∂p(y)
 end
 
 ## C4vCTMRG gradient through implicit differentiation
