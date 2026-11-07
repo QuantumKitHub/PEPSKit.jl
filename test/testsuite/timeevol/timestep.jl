@@ -49,7 +49,7 @@ function timeevol_timestep_ntu(AT)
     dt, nstep = 0.1, 20
     trunc = truncerror(; atol = 1.0e-10) & truncrank(4)
 
-    @testset "NeighbourUpdate timestep" begin
+    @testset "NeighbourUpdate timestep ($AT)" begin
         alg = NeighbourUpdate(; opt_alg = ALSTruncation(; trunc))
         # manual timestep
         evolver = TimeEvolver(ψ0, H, dt, nstep, alg)

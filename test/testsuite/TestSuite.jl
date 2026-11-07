@@ -239,6 +239,18 @@ module TimeEvolSiteDepTruncation
 end
 using .TimeEvolSiteDepTruncation
 
+module TimeEvolHeisGroundstate
+    include("timeevol/heis_groundstate.jl")
+    export timeevol_heis_groundstate
+end
+using .TimeEvolHeisGroundstate
+
+module TimeEvolIsingRealtime
+    include("timeevol/tf_ising_realtime.jl")
+    export timeevol_ising_realtime
+end
+using .TimeEvolIsingRealtime
+
 module TimeEvolJ1J2FiniteT
     include("timeevol/j1j2_finiteT.jl")
     export timeevol_j1j2_finiteT

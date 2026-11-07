@@ -12,8 +12,10 @@ end
 
 if CUDA.functional()
     TestSuite.timeevol_timestep(CuArray)
+    TestSuite.timeevol_timestep_ntu(CuArray)
 end
 
 if AMDGPU.functional()
     TestSuite.timeevol_timestep(ROCArray)
+    TestSuite.timeevol_timestep_ntu(ROCArray)
 end
