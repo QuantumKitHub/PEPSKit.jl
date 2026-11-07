@@ -92,13 +92,10 @@ end
 
 # Endpoint orthogonal factors keep their remaining physical axes before the four virtual axes.
 function _bond_rotation(X::Union{PEPSOrth, PEPOOrth}, dir_from::Int, dir_to::Int)
-    Np = numind(X) - 4
-    return permute(
-        X, (
-            ntuple(identity, Np)...,
-            ntuple(i -> Np + mod1(i + dir_from - dir_to, 4), 4)...,
-        )
-    )
+    axes = allind(X)
+    physical = axes[1:(end - 4)]
+    virtual = TupleTools.circshift(axes[(end - 3):end], dir_to - dir_from)
+    return permute(X, (physical..., virtual...))
 end
 
 """
