@@ -18,7 +18,7 @@ Construct a `FullPullback` algorithm struct from the following keyword arguments
 * `verbosity::Int=0` : Suppresses all output if `≤0`, prints gauge dependency warnings if `1`, and always prints gauge dependency if `≥2`.
 """
 @kwdef struct FullPullback
-    degeneracy_atol::Real = Defaults.rrule_degeneracy_atol
+    degeneracy_atol::Float64 = Defaults.rrule_degeneracy_atol
     verbosity::Int = 0
 end
 
@@ -41,7 +41,7 @@ Construct a `TruncPullback` algorithm struct from the following keyword argument
 * `verbosity::Int=0` : Suppresses all output if `≤0`, prints gauge dependency warnings if `1`, and always prints gauge dependency if `≥2`.
 """
 @kwdef struct TruncPullback
-    degeneracy_atol::Real = Defaults.rrule_degeneracy_atol
+    degeneracy_atol::Float64 = Defaults.rrule_degeneracy_atol
     verbosity::Int = 0
 end
 
