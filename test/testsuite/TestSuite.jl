@@ -46,6 +46,30 @@ module BoundaryMPSVUMPS
 end
 using .BoundaryMPSVUMPS
 
+module BoundaryMPSC4vGradients
+    include("boundarymps/c4v_gradients.jl")
+    export boundary_mps_c4v_gradients
+end
+using .BoundaryMPSC4vGradients
+
+module BoundaryMPSC4vObservables
+    include("boundarymps/c4v_observables.jl")
+    export boundary_mps_c4v_observables
+end
+using .BoundaryMPSC4vObservables
+
+module BoundaryMPSAsymmetricObservables
+    include("boundarymps/asymmetric_observables.jl")
+    export boundary_mps_asymmetric_observables
+end
+using .BoundaryMPSAsymmetricObservables
+
+module BoundaryMPSAsymmetricGradients
+    include("boundarymps/asymmetric_gradients.jl")
+    export boundary_mps_asymmetric_gradients
+end
+using .BoundaryMPSAsymmetricGradients
+
 # BP
 # --------------
 module BPExpVals

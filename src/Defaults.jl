@@ -17,6 +17,24 @@ Module containing default algorithm parameter values and arguments.
 * `ctmrg_tol_max=$(Defaults.ctmrg_tol_max)` : Maximal CTMRG tolerance used by `ctmrg_dynamic_tols`.
 * `ctmrg_tol_factor=$(Defaults.ctmrg_tol_factor)` : Tolerance scaling factor used by `ctmrg_dynamic_tols`.
 
+## Boundary contraction
+
+* `boundary_alg=:$(Defaults.boundary_alg)` : Default algorithm family used to contract a network, see [`PEPSKit.BoundaryAlgorithm`](@ref).
+    - `:SimultaneousCTMRG`, `:SequentialCTMRG` : CTMRG contraction of a network with any unit cell.
+    - `:C4vCTMRG` : CTMRG contraction of a fully symmetric single-site network.
+    - `:BoundaryMPS` : Boundary MPS contraction of a network with any unit cell.
+    - `:C4vBoundaryMPS` : Boundary MPS contraction of a fully symmetric single-site network.
+
+## Boundary MPS
+
+* `boundarymps_alg=:$(Defaults.boundarymps_alg)` : Default boundary MPS algorithm variant.
+    - `:BoundaryMPS` : Top and bottom boundary MPS for a network with any unit cell.
+    - `:C4vBoundaryMPS` : Single boundary MPS for a fully symmetric single-site network.
+* `boundarymps_mps_alg=:$(Defaults.boundarymps_mps_alg)` : Default MPS optimization algorithm driving a boundary MPS contraction.
+    - `:VUMPS` : Variational uniform MPS.
+    - `:VOMPS` : Variational optimization of the MPS through MPO-MPS overlap maximization.
+    - `:GradientGrassmann` : Gradient optimization of the MPS on the Grassmann manifold, for [`PEPSKit.C4vBoundaryMPS`](@ref) only.
+
 ## SVD forward & reverse
 
 * `trunc=:$(Defaults.trunc)` : Truncation scheme for SVDs and other decompositions.
@@ -146,6 +164,13 @@ const ctmrg_dynamic_tols = true
 const ctmrg_tol_min = 1.0e-12
 const ctmrg_tol_max = 1.0e-4
 const ctmrg_tol_factor = 1.0e-3
+
+# Boundary contraction
+const boundary_alg = :SimultaneousCTMRG # ∈ {:SimultaneousCTMRG, :SequentialCTMRG, :C4vCTMRG, :C4vBoundaryMPS, :BoundaryMPS}
+
+# Boundary MPS
+const boundarymps_alg = :BoundaryMPS # ∈ {:BoundaryMPS, :C4vBoundaryMPS}
+const boundarymps_mps_alg = :VUMPS # ∈ {:VUMPS, :VOMPS, :GradientGrassmann}
 
 # SVD forward & reverse
 const trunc = :FixedSpaceTruncation # ∈ {:FixedSpaceTruncation, :notrunc, :truncerror, :truncrank, :truncspace, :trunctol}
