@@ -17,6 +17,8 @@ function utility_diff_maps(AT)
                 gradient = only(Zygote.gradient(X -> real(sum(sdiag_pow(X, power).data)), s))
                 @test storagetype(gradient) === storagetype(s)
                 @test gradient.data ≈ power .* s.data .^ (power - 1)
+                dense_gradient = only(Zygote.gradient(X -> real(sum(sdiag_pow(X, power).data)), TensorMap(s)))
+                @test dense_gradient ≈ TensorMap(gradient)
             end
         end
     end

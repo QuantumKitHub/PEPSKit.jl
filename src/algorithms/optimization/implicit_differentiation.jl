@@ -202,21 +202,29 @@ Evaluating the gradient of the cost function for CTMRG:
 - With explicit evaluation of the geometric sum, the gradient is computed by differentiating the cost function with the environment kept fixed, and then manually adding the gradient contributions from the environments.
 =#
 
-_scrambling_env_gauge(::CTMRGAlgorithm) = ScramblingEnvGauge()
+_scrambling_env_gauge(::Union{CTMRGAlgorithm, CTMRGAlgorithmTriangular}) = ScramblingEnvGauge()
+_scrambling_env_gauge(::C4vCTMRG) = ScramblingEnvGaugeC4v()
 
 function _set_fixed_truncation(alg::CTMRGAlgorithm)
     alg_fixed = @set alg.projector_alg = _set_truncation(alg.projector_alg, FixedSpaceTruncation())
     return alg_fixed
 end
 
+function _set_fixed_truncation(alg::SimultaneousCTMRGTriangular)
+    return @set alg.trunctype = :FixedSpaceTruncation
+end
+
+_ctmrg_network(state, ::CTMRGAlgorithm) = InfiniteSquareNetwork(state)
+_ctmrg_network(state, ::CTMRGAlgorithmTriangular) = InfiniteTriangularNetwork(state)
+
 # compute the CTMRG gradient through fixed-point differentiation
 function _rrule(
         gradmode::FixedPointGradient,
         config::RuleConfig,
         ::typeof(MPSKit.leading_boundary),
-        envinit::AbstractCTMRGEnv,
+        envinit::Union{CTMRGEnv, CTMRGEnvTriangular},
         state,
-        alg::CTMRGAlgorithm,
+        alg::Union{CTMRGAlgorithm, CTMRGAlgorithmTriangular},
     )
     _check_algorithm_combination(alg, gradmode)
 
@@ -225,13 +233,12 @@ function _rrule(
     # prepare iterating function corresponding to a single gauge-fixed CTMRG iteration
     alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
     alg_gauge = _scrambling_env_gauge(alg) # select appropriate gauge-fixing algorithm
-    env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
-    signs, = compute_gauge_fix_gauge(env_conv, env, alg_gauge)
-    # fix global phases relative to the fixed point inside the iteration
+    env_conv, info = ctmrg_iteration(_ctmrg_network(state, alg), env, alg_fixed)
+    signs, corner_phases, edge_phases = compute_gauge_fix_gauge(env_conv, env, alg_gauge)
     function gauge_fixed_iteration(A, x)
-        return fix_global_phases(
-            fix_relative_phases(ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1], signs),
-            env,
+        return fix_phases(
+            ctmrg_iteration(_ctmrg_network(A, alg), x, alg_fixed)[1],
+            signs, corner_phases, edge_phases,
         )
     end
     # prepare its pullback
@@ -411,6 +418,17 @@ function _gauge_fix_c4v_projector(::C4vCTMRG{<:C4vEighProjector}, signs, info)
 end
 function _gauge_fix_c4v_projector(::C4vCTMRG{<:C4vQRProjector}, signs, info)
     return info.Q * signs[1]'
+end
+
+function _check_algorithm_combination(::CTMRGAlgorithmTriangular, ::ImplicitGradient)
+    throw(ArgumentError("triangular CTMRG supports FixedPointGradient; characteristic equations for ImplicitGradient are not implemented"))
+end
+
+function _rrule(
+        gradmode::ImplicitGradient, config::RuleConfig,
+        ::typeof(MPSKit.leading_boundary), envinit, state, alg::CTMRGAlgorithmTriangular,
+    )
+    return _check_algorithm_combination(alg, gradmode)
 end
 
 function _check_algorithm_combination(::SequentialCTMRG, ::ImplicitGradient)

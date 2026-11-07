@@ -10,6 +10,52 @@ using MatrixAlgebraKit: TruncatedAlgorithm, diagview, svd_trunc_no_error
 
 function utility_svd_wrapper(AT)
     return @testset "svd_wrapper ($AT)" begin
+        @testset "Full SVD" begin
+            Random.seed!(41279)
+            for T in (Float64, ComplexF64), (V, W) in (
+                        (ℂ^2, ℂ^3), (ℂ^3, ℂ^2),
+                        (Z2Space(0 => 2, 1 => 1), Z2Space(0 => 1, 1 => 2)),
+                    ), pullback in (:FullPullback, :TruncPullback)
+                A = adapt(AT, randn(T, V, W))
+                R = adapt(AT, randn(T, V, W))
+                direction = normalize(adapt(AT, randn(T, V, W)))
+                alg = SVDAdjoint(; rrule_alg = (; alg = pullback))
+                loss = function (A)
+                    U, S, V = svd_full(A, alg)
+                    return real(dot(R, U * (S * S' * S) * V))
+                end
+                original = copy(A)
+                U, S, V = svd_full(A, alg)
+                @test U * S * V ≈ A
+                @test space.((U, S, V)) == space.(svd_full(A))
+                @test A == original
+                @test prod(svd_full(A', alg)) ≈ A'
+                g = only(gradient(loss, A))
+                g′ = only(
+                    gradient(A) do A
+                        U, S, V = svd_full(A', alg)
+                        real(dot(R', U * (S * S' * S) * V))
+                    end
+                )
+                @test g′ ≈ g
+                ε = 1.0e-5
+                @test real(dot(g, direction)) ≈ (loss(A + ε * direction) - loss(A - ε * direction)) / (2ε) rtol = 1.0e-6 atol = 1.0e-8
+            end
+
+            A = adapt(AT, randn(ComplexF64, ℂ^2, ℂ^3))
+            @test_throws ArgumentError svd_full(A, SVDAdjoint(; fwd_alg = (; alg = :GKL)))
+            for verbosity in (0, 1)
+                alg = SVDAdjoint(; rrule_alg = (; verbosity))
+                (U, S, V), back = rrule(svd_full!, copy(A), alg)
+                if verbosity == 0
+                    @test_logs min_level = Base.CoreLogging.Warn back((im * U, zero(S), zero(V)))
+                else
+                    @test_logs (:warn, r"`svd` cotangents sensitive to gauge choice") back((im * U, zero(S), zero(V)))
+                end
+                @test back((ZeroTangent(), ZeroTangent(), ZeroTangent()))[2] isa ZeroTangent
+            end
+        end
+
         # Gauge-invariant loss function
         function lossfun(svd_trunc_f, A, alg, R = randn(space(A)), trunc = notrunc())
             alg = @set alg.fwd_alg = TruncatedAlgorithm(alg.fwd_alg, trunc)
