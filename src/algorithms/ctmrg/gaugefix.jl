@@ -166,7 +166,7 @@ end
 function right_transfermatrix_fixedpoint(
         tops, bottoms, alg = Arnoldi(),
         ρ0 = initialize_right_fixedpoint(tops, bottoms),
-        allocator = default_allocator(ρ0, Defaults.scheduler[])
+        allocator = default_allocator(ρ0, SerialScheduler())
     )
     _, vecs, info = eigsolve(ρ0, 1, :LM, alg) do ρ
         return foldr(zip(tops, bottoms); init = ρ) do (top, bottom), ρ
