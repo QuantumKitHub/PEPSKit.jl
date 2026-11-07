@@ -14,10 +14,12 @@ function timeevol_heis_groundstate(AT)
     return @testset "Heisenberg ground state ($AT)" begin
         Random.seed!(1457860)
         Nr, Nc = 2, 2
-        H = adapt(AT, j1_j2_model(
-            Float64, U1Irrep, InfiniteSquare(Nr, Nc);
-            J1 = 1.0, J2 = 0.0, sublattice = false
-        ))
+        H = adapt(
+            AT, j1_j2_model(
+                Float64, U1Irrep, InfiniteSquare(Nr, Nc);
+                J1 = 1.0, J2 = 0.0, sublattice = false
+            )
+        )
         Pspace = U1Space(1 // 2 => 1, -1 // 2 => 1)
         Vspace = U1Space(0 => 2, 1 // 2 => 1, -1 // 2 => 1)
         ψ0 = adapt(AT, InfinitePEPS(rand, Float64, Pspace, Vspace; unitcell = (Nr, Nc)))
