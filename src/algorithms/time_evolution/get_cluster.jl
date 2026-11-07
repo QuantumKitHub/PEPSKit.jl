@@ -73,6 +73,52 @@ function _nn_bonddir(site1::CartesianIndex{2}, site2::CartesianIndex{2})
 end
 
 """
+Apply the tensor rotation that maps a bond from orientation `dir_from`
+to orientation `dir_to`, where the directions are one of
+`NORTH`, `EAST`, `SOUTH`, `WEST`.
+"""
+function _bond_rotation(x, dir_from::Int, dir_to::Int)
+    delta = mod(dir_to - dir_from, 4)
+    return if delta == 0
+        x
+    elseif delta == 1
+        rotr90(x)
+    elseif delta == 2
+        rot180(x)
+    else # delta == 3
+        rotl90(x)
+    end
+end
+
+# Endpoint orthogonal factors keep their remaining physical axes before the four virtual axes.
+function _bond_rotation(X::Union{PEPSOrth, PEPOOrth}, dir_from::Int, dir_to::Int)
+    axes = allind(X)
+    physical = axes[1:(end - 4)]
+    virtual = TupleTools.circshift(axes[(end - 3):end], dir_to - dir_from)
+    return permute(X, (physical..., virtual...))
+end
+
+"""
+Map a site coordinate from the lattice frame where the bond has orientation
+`dir_from` to the frame where the bond has orientation `dir_to`.
+"""
+function _bond_rotation(
+        site::CartesianIndex{2}, dir_from::Int, dir_to::Int,
+        unitcell::NTuple{2, Int}
+    )
+    delta = mod(dir_to - dir_from, 4)
+    return if delta == 0
+        site
+    elseif delta == 1
+        siterotr90(site, unitcell)
+    elseif delta == 2
+        siterot180(site, unitcell)
+    else # delta == 3
+        siterotl90(site, unitcell)
+    end
+end
+
+"""
 Obtain the cluster `Ms` along the (open) path `sites` in `state`.
 
 ## Returns
@@ -119,4 +165,14 @@ function _get_cluster(
     end
     Ms = map(site -> state[site], sites)
     return Ms, open_vaxs, perms
+end
+
+"""
+Given a vector `Ms` of `AbstractTensorMap`s,
+apply permutations `perms` to each tensor.
+"""
+function _permute_cluster(Ms::Vector{<:AbstractTensorMap}, perms::Vector{<:Tuple})
+    return map(Ms, perms) do M, perm
+        return permute(M, perm)
+    end
 end
