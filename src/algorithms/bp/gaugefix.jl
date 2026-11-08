@@ -58,8 +58,8 @@ function gauge_fix(psi::InfinitePEPO, alg::BPGauge, env::BPEnv)
         return fuse_physicalspaces(t)
     end
     psi_Fs = reshape(psi_Fs, (Nr, Nc))
-    psi′ = map(Base.Fix2(getindex, 1), psi_Fs)
-    Fs = map(Base.Fix2(getindex, 2), psi_Fs)
+    psi′ = first.(psi_Fs)
+    Fs = last.(psi_Fs)
     psi′, gauge = gauge_fix(InfinitePEPS(psi′), alg, env)
     # convert back to iPEPO
     psi′ = map(psi′.A, Fs) do t, F

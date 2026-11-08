@@ -104,7 +104,7 @@ function bp_gaugefix_pepo(AT)
         N, E = random_dual!(fill(V, 2, 3)), random_dual!(fill(V, 2, 3))
         ρ = adapt(AT, InfinitePEPO(fill(P, 2, 3), N, E))
         bp_env = adapt(AT, BPEnv(randn, ComplexF64, ρ))
-        ρg, gauge = gauge_fix(ρ, BPGauge(), bp_env)
+        ρg, gauge = @inferred gauge_fix(ρ, BPGauge(), bp_env)
         @test gauge_transform(ρ, gauge) ≈ ρg
         env = adapt(AT, CTMRGEnv(InfinitePEPS(ρ), V))
         envg = gauge_transform(env, gauge)

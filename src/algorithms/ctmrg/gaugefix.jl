@@ -77,7 +77,7 @@ function compute_relative_phases(
         envfinal::AbstractCTMRGEnv{C, T}, envprev::AbstractCTMRGEnv{C, T}, ::ScramblingEnvGauge
     ) where {C, T}
 
-    signs = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
+    signs = _map_gauge_matrices(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
         # Gather edge tensors and pretend they're InfiniteMPSs
         if dir == NORTH
             Tsprev = circshift(envprev.edges[dir, r, :], 1 - c)
@@ -146,7 +146,8 @@ end
 
 function initialize_right_fixedpoint(tops, bottoms)
     ρ0 = randn(
-        TensorKit.promote_storagetype(tops...), space(tops[end], numind(tops[end]))' ← space(bottoms[end], numind(bottoms[end]))'
+        mapreduce(storagetype, TensorKit.promote_storagetype, tops),
+        space(tops[end], numind(tops[end]))' ← space(bottoms[end], numind(bottoms[end]))'
     )
     return ρ0
 end

@@ -79,12 +79,21 @@ CTMRGEnvGaugeTransform(pairs::AbstractArray{<:Tuple{MPSBondTensor, MPSBondTensor
 Base.inv(gauge::VirtualGaugeTransform) = VirtualGaugeTransform(gauge.inverses, gauge.matrices)
 Base.inv(gauge::CTMRGEnvGaugeTransform) = CTMRGEnvGaugeTransform(gauge.inverses, gauge.matrices)
 
+# Preserve inferred unions of tensor maps, which ordinary map widens.
+function _map_gauge_matrices(f::F, coords::AbstractArray{I, N}) where {F, I, N}
+    T = Base.promote_op(f, I)
+    if T <: MPSBondTensor && (isconcretetype(T) || T isa Union)
+        return map!(f, Array{T, N}(undef, size(coords)), coords)
+    end
+    return map(f, coords)
+end
+
 """Rotate virtual bonds counterclockwise, reversing the old north bonds into new east bonds."""
 function _rotl90_virtual_gauge(
         matrices::AbstractArray{<:MPSBondTensor}, inverses::AbstractArray{<:MPSBondTensor}
     )
     nr, nc = size(matrices)[2:3]
-    return map(CartesianIndices((2, nc, nr, size(matrices)[4:end]...))) do I
+    return _map_gauge_matrices(CartesianIndices((2, nc, nr, size(matrices)[4:end]...))) do I
         d, r, c = Tuple(I)[1:3]
         layer = Tuple(I)[4:end]
         # Match the leg permutation in state rotations, including fermionic signs.
@@ -98,7 +107,7 @@ function _rotr90_virtual_gauge(
         matrices::AbstractArray{<:MPSBondTensor}, inverses::AbstractArray{<:MPSBondTensor}
     )
     nr, nc = size(matrices)[2:3]
-    return map(CartesianIndices((2, nc, nr, size(matrices)[4:end]...))) do I
+    return _map_gauge_matrices(CartesianIndices((2, nc, nr, size(matrices)[4:end]...))) do I
         d, r, c = Tuple(I)[1:3]
         layer = Tuple(I)[4:end]
         return d == NORTH ?
@@ -110,7 +119,7 @@ end
 """Rotate virtual bonds by a half turn, reversing both bond directions using inverse maps."""
 function _rot180_virtual_gauge(inverses::AbstractArray{<:MPSBondTensor})
     nr, nc = size(inverses)[2:3]
-    return map(CartesianIndices(inverses)) do I
+    return _map_gauge_matrices(CartesianIndices(inverses)) do I
         d, r, c = Tuple(I)[1:3]
         layer = Tuple(I)[4:end]
         r, c = nr + 1 - r, nc + 1 - c
