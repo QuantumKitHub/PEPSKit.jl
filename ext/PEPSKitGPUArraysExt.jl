@@ -17,7 +17,7 @@ PEPSKit._indexable_diagview(m::AnyGPUArray) = collect(MAK.diagview(m))
 
 const GPUTensorMap = TensorMap{<:LinearAlgebra.BlasFloat, <:Any, <:Any, <:Any, <:AbstractGPUArray}
 
-_offsets(S::SectorDict) = Int32.(first.(values(S)))
+_offsets(S::TensorKit.SectorDict) = Int32.(first.(values(S)))
 _offsets(S::AbstractDict) = sort!(Int32.(first.(values(S))))
 function PEPSKit.corner_spectrum(C::GPUTensorMap, ::PEPSKit.C4vCTMRG)
     S = eigh_vals(C)
