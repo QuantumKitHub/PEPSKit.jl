@@ -77,31 +77,24 @@ function compute_relative_phases(
         envfinal::AbstractCTMRGEnv{C, T}, envprev::AbstractCTMRGEnv{C, T}, ::ScramblingEnvGauge
     ) where {C, T}
 
-    signs = _map_gauge_matrices(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
-        # Gather edge tensors and pretend they're InfiniteMPSs
-        if dir == NORTH
-            Tsprev = circshift(envprev.edges[dir, r, :], 1 - c)
-            Tsfinal = circshift(envfinal.edges[dir, r, :], 1 - c)
-        elseif dir == EAST
-            Tsprev = circshift(envprev.edges[dir, :, c], 1 - r)
-            Tsfinal = circshift(envfinal.edges[dir, :, c], 1 - r)
-        elseif dir == SOUTH
-            Tsprev = circshift(reverse(envprev.edges[dir, r, :]), c)
-            Tsfinal = circshift(reverse(envfinal.edges[dir, r, :]), c)
-        elseif dir == WEST
-            Tsprev = circshift(reverse(envprev.edges[dir, :, c]), r)
-            Tsfinal = circshift(reverse(envfinal.edges[dir, :, c]), r)
-        end
-
-        # Random MPS of same bond dimension
+    signs = map(eachcoordinate(envfinal, 1:4)) do coordinate
+        Tsprev = _gauge_transfer_edges(envprev.edges, coordinate)
+        Tsfinal = _gauge_transfer_edges(envfinal.edges, coordinate)
         M = map(Tsfinal) do t
-            randn(storagetype(T), codomain(t) ← domain(t))
+            return randn(storagetype(t), codomain(t) ← domain(t))
         end
-
         return _scrambling_gauge_matrix(Tsprev, Tsfinal, M, Arnoldi())
     end
 
     return CTMRGEnvGaugeTransform(signs, adjoint.(signs))
+end
+
+function _gauge_transfer_edges(edges, (dir, r, c))
+    dir == NORTH && return circshift(edges[dir, r, :], 1 - c)
+    dir == EAST && return circshift(edges[dir, :, c], 1 - r)
+    dir == SOUTH && return circshift(reverse(edges[dir, r, :]), c)
+    dir == WEST && return circshift(reverse(edges[dir, :, c]), r)
+    throw(ArgumentError(lazy"invalid direction $dir"))
 end
 
 function compute_relative_phases(envfinal::C4vCTMRGEnv{C, T}, envprev::C4vCTMRGEnv{C, T}, ::ScramblingEnvGauge) where {C, T}

@@ -72,11 +72,11 @@ if !is_buildkite
                     (CTMRGEnvGaugeTransform, (4, 2, 1)),
                 )
                 gauge = make_gauge(fill(X, dims), fill(X', dims))
-                jl_gauge = adapt(JLArray, gauge)
+                jl_gauge = @inferred adapt(JLArray, gauge)
                 @test all(t -> storagetype(t) <: JLArray, jl_gauge.matrices)
                 @test all(t -> storagetype(t) <: JLArray, jl_gauge.inverses)
                 @test first(jl_gauge.inverses) isa TensorKit.AdjointTensorMap
-                host_gauge = adapt(Array, jl_gauge)
+                host_gauge = @inferred adapt(Array, jl_gauge)
                 @test host_gauge.matrices == gauge.matrices
                 @test host_gauge.inverses == gauge.inverses
             end
