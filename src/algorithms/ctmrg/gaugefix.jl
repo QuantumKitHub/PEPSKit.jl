@@ -57,14 +57,15 @@ function compute_relative_phases(
         envfinal::AbstractCTMRGEnv{C, T}, envprev::AbstractCTMRGEnv{C, T}, ::ScramblingEnvGauge
     ) where {C, T}
     _check_gauge_fix_spaces(envfinal, envprev)
-    signs = map(eachcoordinate(envfinal, 1:4)) do coordinate
-        Tsprev = _gauge_transfer_edges(envprev.edges, coordinate)
-        Tsfinal = _gauge_transfer_edges(envfinal.edges, coordinate)
-        M = map(Tsfinal) do t
-            return randn(storagetype(t), codomain(t) ← domain(t))
-        end
-        return _scrambling_gauge_matrix(Tsprev, Tsfinal, M, Arnoldi())
-    end
+    # Julia 1.10 infers the gauge array with a comprehension.
+    signs = [
+        begin
+            Tsprev = _gauge_transfer_edges(envprev.edges, coordinate)
+            Tsfinal = _gauge_transfer_edges(envfinal.edges, coordinate)
+            M = map(t -> randn(storagetype(t), space(t)), Tsfinal)
+            _scrambling_gauge_matrix(Tsprev, Tsfinal, M, Arnoldi())
+        end for coordinate in eachcoordinate(envfinal, 1:4)
+    ]
 
     return CTMRGEnvGaugeTransform(signs, adjoint.(signs))
 end
