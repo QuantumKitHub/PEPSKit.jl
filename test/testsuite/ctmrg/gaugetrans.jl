@@ -4,7 +4,7 @@ using TensorKit
 using PEPSKit
 using Adapt
 using PEPSKit: random_dual!, eachcoordinate, NORTH
-using PEPSKit: _contract_site
+using PEPSKit: @autoopt, _contract_site, _gauge_transform_corner
 
 ds = Dict(
     U1Irrep => U1Space(i => d for (i, d) in zip(-1:1, (1, 1, 2))),
@@ -52,6 +52,17 @@ function ctmrg_gaugetrans(AT)
             ρ = reduced_densitymatrix(inds, ψ, env)
             @test reduced_densitymatrix(inds, ψg, envg) ≈ ρ
             @test reduced_densitymatrix(inds, ψ, envb) ≈ ρ
+        end
+        if S == FermionParity
+            for (left, right) in ((D, D'), (D', D))
+                corner = adapt(AT, randn(ComplexF64, left ← right))
+                Xout = _random_gauge_matrix(AT, left)
+                Xin = _random_gauge_matrix(AT, right)
+                σin = Xin'
+                @autoopt @tensor expected[χ_out; χ_in] :=
+                    Xout[χ_out; χ1] * corner[χ1; χ2] * conj(σin[χ_in; χ2])
+                @test _gauge_transform_corner(corner, Xout, Xin) ≈ expected
+            end
         end
     end
 end

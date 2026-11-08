@@ -170,10 +170,10 @@ fix_relative_phases(env::CTMRGEnv, signs::CTMRGEnvGaugeTransform) = gauge_transf
 function fix_relative_phases(env::C4vCTMRGEnv, signs::CTMRGEnvGaugeTransform)
     X, Xinv = signs.matrices, signs.inverses
     corners = map(env.corners) do C
-        return fix_gauge_corner(C, X[WEST, 1, 1], Xinv[NORTH, 1, 1]')
+        return _gauge_transform_corner(C, X[WEST, 1, 1], Xinv[NORTH, 1, 1])
     end
     edges = map(eachcoordinate(env, 1:4)) do (dir, r, c)
-        return fix_gauge_edge(env.edges[dir, r, c], X[dir, r, c], Xinv[dir, r, c]')
+        return absorb_left_right(env.edges[dir, r, c], X[dir, r, c], Xinv[dir, r, c])
     end
     return C4vCTMRGEnv(corners, edges)
 end
