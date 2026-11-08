@@ -226,7 +226,7 @@ function _rrule(
     alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
     alg_gauge = _scrambling_env_gauge(alg) # select appropriate gauge-fixing algorithm
     env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
-    signs, = compute_gauge_fix_gauge(env_conv, env, alg_gauge)
+    signs = compute_relative_phases(env_conv, env, alg_gauge)
     # `p` for state, `x` for environment
     function gauge_fixed_iteration(p, x)
         # fix global phases relative to the fixed point inside the iteration
@@ -478,8 +478,8 @@ function _rrule(
     alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
     alg_gauge = _scrambling_env_gauge(alg) # select appropriate gauge-fixing algorithm
     env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
-    signs, corner_phases, edge_phases = compute_gauge_fix_gauge(env_conv, env, alg_gauge)
-    env_fixed = fix_phases(env_conv, signs, corner_phases, edge_phases)
+    signs = compute_relative_phases(env_conv, env, alg_gauge)
+    env_fixed = fix_global_phases(fix_relative_phases(env_conv, signs), env)
 
     # NOTE: explicitly keeping corner non-diagonal and (possibly) complex, for use in the backwards pass
     C, E = env_fixed.corners[NORTHWEST, 1, 1], env_fixed.edges[NORTH, 1, 1]
@@ -624,7 +624,7 @@ function PEPSKit._rrule(
     # gauge-fix SVD isometries
     alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
     env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
-    signs, = compute_gauge_fix_gauge(env_conv, env, ScramblingEnvGauge())
+    signs = compute_relative_phases(env_conv, env, ScramblingEnvGauge())
     S = normalize.(info.S)
     U, V = fix_relative_phases(info.U, info.V, signs)
 

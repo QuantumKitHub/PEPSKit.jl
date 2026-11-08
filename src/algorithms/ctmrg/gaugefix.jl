@@ -21,49 +21,29 @@ element-wise converged to `envprev`.
 function gauge_fix(
         envfinal::AbstractCTMRGEnv{C, T}, envprev::AbstractCTMRGEnv{C, T}, alg::ScramblingEnvGauge
     ) where {C, T}
-    signs, corner_phases, edge_phases = compute_gauge_fix_gauge(envfinal, envprev, alg)
-    return fix_phases(envfinal, signs, corner_phases, edge_phases)
+    signs = compute_relative_phases(envfinal, envprev, alg)
+    return fix_global_phases(fix_relative_phases(envfinal, signs), envprev)
+end
+
+function _check_gauge_fix_spaces(envfinal::AbstractCTMRGEnv, envprev::AbstractCTMRGEnv)
+    (axes(envfinal.corners) == axes(envprev.corners) && axes(envfinal.edges) == axes(envprev.edges)) ||
+        throw(DimensionMismatch("Unit cells of envfinal and envprev do not match"))
+    for (final, prev) in ((envfinal.corners, envprev.corners), (envfinal.edges, envprev.edges))
+        same_spaces = all(zip(final, prev)) do (a, b)
+            return space(a) == space(b)
+        end
+        same_spaces || throw(ArgumentError("Spaces of envfinal and envprev are not the same"))
+    end
+    return nothing
 end
 
 function compute_gauge_fix_gauge(
-        envfinal::CTMRGEnv{C, T}, envprev::CTMRGEnv{C, T}, alg::ScramblingEnvGauge
+        envfinal::AbstractCTMRGEnv{C, T}, envprev::AbstractCTMRGEnv{C, T}, alg::ScramblingEnvGauge
     ) where {C, T}
-    # Check if spaces in envprev and envfinal are the same
-    same_spaces = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
-        space(envfinal.edges[dir, r, c]) == space(envprev.edges[dir, r, c]) &&
-            space(envfinal.corners[dir, r, c]) == space(envprev.corners[dir, r, c])
-    end
-    all(same_spaces) || throw(ArgumentError("Spaces of envfinal and envprev are not the same"))
-
-    # find relative phases
     signs = compute_relative_phases(envfinal, envprev, alg)
-
-    # find additional global phases
-    corner_phases, edge_phases = compute_global_phases(
-        gauge_transform(envfinal, signs), envprev
-    )
-
-    return signs, corner_phases, edge_phases
-end
-
-function compute_gauge_fix_gauge(
-        envfinal::C4vCTMRGEnv{C, T}, envprev::C4vCTMRGEnv{C, T}, alg::ScramblingEnvGauge
-    ) where {C, T}
-    # Check if spaces in envprev and envfinal are the same
-    same_spaces = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
-        space(envfinal.edges[dir, r, c]) == space(envprev.edges[dir, r, c]) &&
-            space(envfinal.corners[1, r, c]) == space(envprev.corners[1, r, c])
-    end
-    all(same_spaces) || throw(ArgumentError("Spaces of envfinal and envprev are not the same"))
-
-    # find relative phases
-    signs = compute_relative_phases(envfinal, envprev, alg)
-
-    # find additional global phases
     corner_phases, edge_phases = compute_global_phases(
         fix_relative_phases(envfinal, signs), envprev
     )
-
     return signs, corner_phases, edge_phases
 end
 
@@ -76,7 +56,7 @@ end
 function compute_relative_phases(
         envfinal::AbstractCTMRGEnv{C, T}, envprev::AbstractCTMRGEnv{C, T}, ::ScramblingEnvGauge
     ) where {C, T}
-
+    _check_gauge_fix_spaces(envfinal, envprev)
     signs = map(eachcoordinate(envfinal, 1:4)) do coordinate
         Tsprev = _gauge_transfer_edges(envprev.edges, coordinate)
         Tsfinal = _gauge_transfer_edges(envfinal.edges, coordinate)
@@ -98,6 +78,7 @@ function _gauge_transfer_edges(edges, (dir, r, c))
 end
 
 function compute_relative_phases(envfinal::C4vCTMRGEnv{C, T}, envprev::C4vCTMRGEnv{C, T}, ::ScramblingEnvGauge) where {C, T}
+    _check_gauge_fix_spaces(envfinal, envprev)
     # "general" algorithm from https://arxiv.org/abs/2311.11894
     Tprev = envprev.edges[1, 1, 1]
     Tfinal = envfinal.edges[1, 1, 1]
@@ -178,12 +159,12 @@ function fix_relative_phases(
     nr, nc = size(U)[2:3]
     U_fixed = map(eachindex(IndexCartesian(), U)) do I
         d, r, c = Tuple(I)
-        ri, ci = _environment_gauge_neighbor(d, r, c, nr, nc)
+        _, ri, ci = _next_coordinate((d, r, c), nr, nc)
         return U[I] * signs.inverses[d, ri, ci]
     end
     V_fixed = map(eachindex(IndexCartesian(), V)) do I
         d, r, c = Tuple(I)
-        ri, ci = _environment_gauge_neighbor(d, r, c, nr, nc)
+        _, ri, ci = _next_coordinate((d, r, c), nr, nc)
         return signs.matrices[d, ri, ci] * V[I]
     end
     return U_fixed, V_fixed

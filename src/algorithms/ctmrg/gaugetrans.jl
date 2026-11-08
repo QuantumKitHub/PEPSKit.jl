@@ -53,11 +53,11 @@ function gauge_transform(env::CTMRGEnv, gauge::CTMRGEnvGaugeTransform)
     X, Xinv = gauge.matrices, gauge.inverses
     nr, nc = size(env)[2:3]
     corners = map(eachcoordinate(env, 1:4)) do (d, r, c)
-        ri, ci = _environment_gauge_neighbor(d, r, c, nr, nc)
+        _, ri, ci = _next_coordinate((d, r, c), nr, nc)
         return _gauge_transform_corner(env.corners[d, r, c], X[_prev(d, 4), r, c], Xinv[d, ri, ci])
     end
     edges = map(eachcoordinate(env, 1:4)) do (d, r, c)
-        ri, ci = _environment_gauge_neighbor(d, r, c, nr, nc)
+        _, ri, ci = _next_coordinate((d, r, c), nr, nc)
         return absorb_left_right(env.edges[d, r, c], X[d, r, c], Xinv[d, ri, ci])
     end
     return CTMRGEnv(corners, edges)
@@ -68,12 +68,4 @@ function _gauge_transform_corner(C::CTMRGCornerTensor, Xout::MPSBondTensor, Xin:
     # Keep the explicit contraction for the fermionic signs of mixed-dual corners.
     return @autoopt @tensor Cg[χ_out; χ_in] :=
         Xout[χ_out; χ1] * C[χ1; χ2] * Xin[χ2; χ_in]
-end
-
-"""Find the next boundary bond along an edge, respecting the periodic unit cell."""
-function _environment_gauge_neighbor(d::Int, r::Int, c::Int, nr::Int, nc::Int)
-    d == NORTH && return r, _next(c, nc)
-    d == EAST && return _next(r, nr), c
-    d == SOUTH && return r, _prev(c, nc)
-    return _prev(r, nr), c
 end
