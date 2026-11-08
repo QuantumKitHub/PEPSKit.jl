@@ -43,7 +43,7 @@ function test_unitcell(
 
     # test if gauge fixing routines run through
     signs, corner_phases, edge_phases = compute_gauge_fix_gauge(env″, env′, ScramblingEnvGauge())
-    @test signs isa Array
+    @test signs isa CTMRGEnvGaugeTransform
     @test corner_phases isa Array
     @test edge_phases isa Array
     return nothing
