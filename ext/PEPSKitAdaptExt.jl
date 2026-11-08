@@ -1,6 +1,7 @@
 module PEPSKitAdaptExt
 
 using PEPSKit
+using PEPSKit: _map_gauge_matrices
 using Adapt
 
 function Adapt.adapt_structure(to, x::PEPSKit.LocalOperator{T, S}) where {T, S}
@@ -33,6 +34,20 @@ function Adapt.adapt_structure(to, x::PEPSKit.C4vCTMRGEnv{C, T}) where {C, T}
     C′ = map(c -> adapt(to, c), x.corners)
     T′ = map(t -> adapt(to, t), x.edges)
     return C4vCTMRGEnv{eltype(C′), eltype(T′)}(C′, T′)
+end
+
+function Adapt.adapt_structure(to, gauge::VirtualGaugeTransform)
+    adapt_tensor = Base.Fix1(adapt, to)
+    return VirtualGaugeTransform(
+        _map_gauge_matrices(adapt_tensor, gauge.matrices), _map_gauge_matrices(adapt_tensor, gauge.inverses)
+    )
+end
+
+function Adapt.adapt_structure(to, gauge::CTMRGEnvGaugeTransform)
+    adapt_tensor = Base.Fix1(adapt, to)
+    return CTMRGEnvGaugeTransform(
+        _map_gauge_matrices(adapt_tensor, gauge.matrices), _map_gauge_matrices(adapt_tensor, gauge.inverses)
+    )
 end
 
 end
