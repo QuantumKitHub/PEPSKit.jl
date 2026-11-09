@@ -231,7 +231,7 @@ function _rrule(
     function gauge_fixed_iteration(p, x)
         # fix global phases relative to the fixed point inside the iteration
         return fix_global_phases(
-            fix_relative_phases(ctmrg_iteration(InfiniteSquareNetwork(p), x, alg_fixed)[1], signs),
+            gauge_transform(ctmrg_iteration(InfiniteSquareNetwork(p), x, alg_fixed)[1], signs),
             env,
         )
     end
@@ -479,7 +479,7 @@ function _rrule(
     alg_gauge = _scrambling_env_gauge(alg) # select appropriate gauge-fixing algorithm
     env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
     signs = compute_relative_phases(env_conv, env, alg_gauge)
-    env_fixed = fix_global_phases(fix_relative_phases(env_conv, signs), env)
+    env_fixed = fix_global_phases(gauge_transform(env_conv, signs), env)
 
     # NOTE: explicitly keeping corner non-diagonal and (possibly) complex, for use in the backwards pass
     C, E = env_fixed.corners[NORTHWEST, 1, 1], env_fixed.edges[NORTH, 1, 1]

@@ -62,3 +62,16 @@ function gauge_transform(env::CTMRGEnv, gauge::CTMRGEnvGaugeTransform, allocator
     end
     return CTMRGEnv(corners, edges)
 end
+
+"""Apply a shared boundary gauge in all four directions of a C4v environment."""
+function gauge_transform(env::C4vCTMRGEnv, gauge::CTMRGEnvGaugeTransform, allocator = DefaultAllocator())
+    _check_gauge_size(gauge, size(env)[2:3])
+    X, Xinv = gauge.matrices, gauge.inverses
+    corners = map(env.corners) do C
+        return absorb_left_right(C, X[WEST, 1, 1], Xinv[NORTH, 1, 1], allocator)
+    end
+    edges = map(eachcoordinate(env, 1:4)) do (dir, r, c)
+        return absorb_left_right(env.edges[dir, r, c], X[dir, r, c], Xinv[dir, r, c], allocator)
+    end
+    return C4vCTMRGEnv(corners, edges)
+end

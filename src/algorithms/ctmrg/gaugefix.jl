@@ -24,7 +24,7 @@ function gauge_fix(
         allocator = DefaultAllocator(),
     ) where {C, T}
     signs = compute_relative_phases(envfinal, envprev, alg, allocator)
-    return fix_global_phases(fix_relative_phases(envfinal, signs, allocator), envprev)
+    return fix_global_phases(gauge_transform(envfinal, signs, allocator), envprev)
 end
 
 function _check_gauge_fix_spaces(envfinal::AbstractCTMRGEnv, envprev::AbstractCTMRGEnv)
@@ -45,13 +45,13 @@ function compute_gauge_fix_gauge(
     ) where {C, T}
     signs = compute_relative_phases(envfinal, envprev, alg, allocator)
     corner_phases, edge_phases = compute_global_phases(
-        fix_relative_phases(envfinal, signs, allocator), envprev
+        gauge_transform(envfinal, signs, allocator), envprev
     )
     return signs, corner_phases, edge_phases
 end
 
 function fix_phases(env::AbstractCTMRGEnv, signs::CTMRGEnvGaugeTransform, corner_phases, edge_phases, allocator = DefaultAllocator())
-    env_fixed_relative = fix_relative_phases(env, signs, allocator)
+    env_fixed_relative = gauge_transform(env, signs, allocator)
     env_fixed_global = fix_global_phases(env_fixed_relative, corner_phases, edge_phases)
     return env_fixed_global
 end
@@ -147,20 +147,6 @@ function right_transfermatrix_fixedpoint(
         info.converged > 0 || @warn "eigsolve did not converge"
     end
     return first(vecs)
-end
-
-fix_relative_phases(env::CTMRGEnv, signs::CTMRGEnvGaugeTransform, allocator = DefaultAllocator()) =
-    gauge_transform(env, signs, allocator)
-
-function fix_relative_phases(env::C4vCTMRGEnv, signs::CTMRGEnvGaugeTransform, allocator = DefaultAllocator())
-    X, Xinv = signs.matrices, signs.inverses
-    corners = map(env.corners) do C
-        return absorb_left_right(C, X[WEST, 1, 1], Xinv[NORTH, 1, 1], allocator)
-    end
-    edges = map(eachcoordinate(env, 1:4)) do (dir, r, c)
-        return absorb_left_right(env.edges[dir, r, c], X[dir, r, c], Xinv[dir, r, c], allocator)
-    end
-    return C4vCTMRGEnv(corners, edges)
 end
 
 function fix_relative_phases(
