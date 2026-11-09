@@ -2,8 +2,8 @@
 # ------------------------------------
 
 """
-    expectation_value(state, O::LocalOperator, env)
-    expectation_value(bra, O::LocalOperator, ket, env)
+    expectation_value(state, O::LocalOperator, env; allocator)
+    expectation_value(bra, O::LocalOperator, ket, env; allocator)
 
 Compute the expectation value ⟨bra|O|ket⟩ / ⟨bra|ket⟩ or tr(O * state) / tr(state) of a [`LocalOperator`](@ref) `O`.
 This can be done either for a PEPS, or alternatively for a density matrix PEPO.
@@ -20,10 +20,8 @@ function MPSKit.expectation_value(
     end
     return sum(term_vals)
 end
-MPSKit.expectation_value(
-    peps::InfinitePEPS, O::LocalOperator, env;
-    allocator = default_allocator(peps, SerialScheduler())
-) = expectation_value(peps, O, peps, env; allocator)
+MPSKit.expectation_value(peps::InfinitePEPS, O::LocalOperator, env; kwargs...) =
+    MPSKit.expectation_value(peps, O, peps, env; kwargs...)
 function MPSKit.expectation_value(
         state::InfinitePEPO, O::LocalOperator, env;
         allocator = default_allocator(state, SerialScheduler())
