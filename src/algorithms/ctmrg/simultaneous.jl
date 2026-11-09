@@ -39,12 +39,13 @@ CTMRG_SYMBOLS[:SimultaneousCTMRG] = SimultaneousCTMRG
 function ctmrg_iteration(network, env::CTMRGEnv, alg::SimultaneousCTMRG, allocator)
     coordinates = eachcoordinate(network, 1:4)
     T_corners = Base.promote_op(
-        TensorMap ∘ EnlargedCorner, typeof(network), typeof(env), eltype(coordinates)
+        (n, e, idx, a) -> TensorMap(EnlargedCorner(n, e, idx), a),
+        typeof(network), typeof(env), eltype(coordinates), typeof(allocator)
     )
     enlarged_corners′ = similar(coordinates, T_corners)
     enlarged_corners::typeof(enlarged_corners′) =
         dtmap!!(enlarged_corners′, eachcoordinate(network, 1:4)) do idx
-        return TensorMap(EnlargedCorner(network, env, idx))
+        return TensorMap(EnlargedCorner(network, env, idx), allocator)
     end  # expand environment
     projectors, info = simultaneous_projectors(enlarged_corners, env, alg.projector_alg, allocator)  # compute projectors on all coordinates
     env′ = renormalize_simultaneously(enlarged_corners, projectors, network, env, allocator)  # renormalize enlarged corners
