@@ -4,7 +4,7 @@ using TensorKit
 using PEPSKit
 using Adapt
 using PEPSKit: random_dual!, eachcoordinate, NORTH
-using PEPSKit: @autoopt, _contract_site, _gauge_transform_corner
+using PEPSKit: @autoopt, _contract_site, absorb_left_right
 
 ds = Dict(
     U1Irrep => U1Space(i => d for (i, d) in zip(-1:1, (1, 1, 2))),
@@ -53,7 +53,7 @@ function ctmrg_gaugetrans(AT)
                 σin = Xin'
                 @autoopt @tensor expected[χ_out; χ_in] :=
                     Xout[χ_out; χ1] * corner[χ1; χ2] * conj(σin[χ_in; χ2])
-                @test _gauge_transform_corner(corner, Xout, Xin) ≈ expected
+                @test absorb_left_right(corner, Xout, Xin) ≈ expected
             end
         end
     end

@@ -17,12 +17,14 @@ Fix the gauge of `envfinal` based on the previous environment `envprev`.
 This assumes that the `envfinal` is the result of one CTMRG iteration on `envprev`.
 Given that the CTMRG run is converged, the returned environment will be
 element-wise converged to `envprev`.
+The optional allocator supplies scratch space for the transfer and boundary contractions.
 """
 function gauge_fix(
-        envfinal::AbstractCTMRGEnv{C, T}, envprev::AbstractCTMRGEnv{C, T}, alg::ScramblingEnvGauge
+        envfinal::AbstractCTMRGEnv{C, T}, envprev::AbstractCTMRGEnv{C, T}, alg::ScramblingEnvGauge,
+        allocator = DefaultAllocator(),
     ) where {C, T}
-    signs = compute_relative_phases(envfinal, envprev, alg)
-    return fix_global_phases(fix_relative_phases(envfinal, signs), envprev)
+    signs = compute_relative_phases(envfinal, envprev, alg, allocator)
+    return fix_global_phases(fix_relative_phases(envfinal, signs, allocator), envprev)
 end
 
 function _check_gauge_fix_spaces(envfinal::AbstractCTMRGEnv, envprev::AbstractCTMRGEnv)
@@ -38,23 +40,25 @@ function _check_gauge_fix_spaces(envfinal::AbstractCTMRGEnv, envprev::AbstractCT
 end
 
 function compute_gauge_fix_gauge(
-        envfinal::AbstractCTMRGEnv{C, T}, envprev::AbstractCTMRGEnv{C, T}, alg::ScramblingEnvGauge
+        envfinal::AbstractCTMRGEnv{C, T}, envprev::AbstractCTMRGEnv{C, T}, alg::ScramblingEnvGauge,
+        allocator = DefaultAllocator(),
     ) where {C, T}
-    signs = compute_relative_phases(envfinal, envprev, alg)
+    signs = compute_relative_phases(envfinal, envprev, alg, allocator)
     corner_phases, edge_phases = compute_global_phases(
-        fix_relative_phases(envfinal, signs), envprev
+        fix_relative_phases(envfinal, signs, allocator), envprev
     )
     return signs, corner_phases, edge_phases
 end
 
-function fix_phases(env::AbstractCTMRGEnv, signs::CTMRGEnvGaugeTransform, corner_phases, edge_phases)
-    env_fixed_relative = fix_relative_phases(env, signs)
+function fix_phases(env::AbstractCTMRGEnv, signs::CTMRGEnvGaugeTransform, corner_phases, edge_phases, allocator = DefaultAllocator())
+    env_fixed_relative = fix_relative_phases(env, signs, allocator)
     env_fixed_global = fix_global_phases(env_fixed_relative, corner_phases, edge_phases)
     return env_fixed_global
 end
 
 function compute_relative_phases(
-        envfinal::AbstractCTMRGEnv{C, T}, envprev::AbstractCTMRGEnv{C, T}, ::ScramblingEnvGauge
+        envfinal::AbstractCTMRGEnv{C, T}, envprev::AbstractCTMRGEnv{C, T}, ::ScramblingEnvGauge,
+        allocator = DefaultAllocator(),
     ) where {C, T}
     _check_gauge_fix_spaces(envfinal, envprev)
     # Julia 1.10 infers the gauge array with a comprehension.
@@ -63,7 +67,7 @@ function compute_relative_phases(
             Tsprev = _gauge_transfer_edges(envprev.edges, coordinate)
             Tsfinal = _gauge_transfer_edges(envfinal.edges, coordinate)
             M = map(t -> randn(storagetype(t), space(t)), Tsfinal)
-            _scrambling_gauge_matrix(Tsprev, Tsfinal, M, Arnoldi())
+            _scrambling_gauge_matrix(Tsprev, Tsfinal, M, Arnoldi(), allocator)
         end for coordinate in eachcoordinate(envfinal, 1:4)
     ]
 
@@ -78,7 +82,10 @@ function _gauge_transfer_edges(edges, (dir, r, c))
     throw(ArgumentError(lazy"invalid direction $dir"))
 end
 
-function compute_relative_phases(envfinal::C4vCTMRGEnv{C, T}, envprev::C4vCTMRGEnv{C, T}, ::ScramblingEnvGauge) where {C, T}
+function compute_relative_phases(
+        envfinal::C4vCTMRGEnv{C, T}, envprev::C4vCTMRGEnv{C, T}, ::ScramblingEnvGauge,
+        allocator = DefaultAllocator(),
+    ) where {C, T}
     _check_gauge_fix_spaces(envfinal, envprev)
     # "general" algorithm from https://arxiv.org/abs/2311.11894
     Tprev = envprev.edges[1, 1, 1]
@@ -88,14 +95,14 @@ function compute_relative_phases(envfinal::C4vCTMRGEnv{C, T}, envprev::C4vCTMRGE
     # (make Hermitian such that T-M transfer matrix has real eigenvalues)
     M = _project_hermitian(randn(storagetype(Tfinal), space(Tfinal)))
 
-    σ = _scrambling_gauge_matrix([Tprev], [Tfinal], [M], Lanczos())
+    σ = _scrambling_gauge_matrix([Tprev], [Tfinal], [M], Lanczos(), allocator)
     return CTMRGEnvGaugeTransform(fill(σ, (4, 1, 1)), fill(σ', (4, 1, 1)))
 end
 
 """Extract the relative unitary gauge from mixed-transfer fixed points with a shared random MPS."""
-function _scrambling_gauge_matrix(Tsprev, Tsfinal, M, eigsolve_alg)
-    ρprev = right_transfermatrix_fixedpoint(Tsprev, M, eigsolve_alg)
-    ρfinal = right_transfermatrix_fixedpoint(Tsfinal, M, eigsolve_alg)
+function _scrambling_gauge_matrix(Tsprev, Tsfinal, M, eigsolve_alg, allocator)
+    ρprev = right_transfermatrix_fixedpoint(Tsprev, M, eigsolve_alg, initialize_right_fixedpoint(Tsprev, M), allocator)
+    ρfinal = right_transfermatrix_fixedpoint(Tsfinal, M, eigsolve_alg, initialize_right_fixedpoint(Tsfinal, M), allocator)
     Qprev, = left_orth!(ρprev; positive = true)
     Qfinal, = left_orth!(ρfinal; positive = true)
     return Qprev * Qfinal'
@@ -108,14 +115,14 @@ end
 # index where spaces(Abar, 2:end) is dual (which we can just ignore as long as we use a random Abar)
 @generated function mps_transfer_right(
         v::AbstractTensorMap{<:Any, S, 1, N₁},
-        A::GenericMPSTensor{S, N₂}, Abar::GenericMPSTensor{S, N₂},
+        A::GenericMPSTensor{S, N₂}, Abar::GenericMPSTensor{S, N₂}, allocator,
     ) where {S, N₁, N₂}
     t_out = tensorexpr(:v, -1, -(2:(N₁ + 1)))
     t_top = tensorexpr(:A, (-1, reverse(3:(N₂ + 1))...), 1)
     t_bot = tensorexpr(:Abar, (-(N₁ + 1), reverse(3:(N₂ + 1))...), 2)
     t_in = tensorexpr(:v, 1, (-(2:N₁)..., 2))
     return macroexpand(
-        @__MODULE__, :(return @tensor $t_out := $t_top * conj($t_bot) * $t_in)
+        @__MODULE__, :(return @tensor allocator = allocator $t_out := $t_top * conj($t_bot) * $t_in)
     )
 end
 
@@ -129,10 +136,11 @@ end
 function right_transfermatrix_fixedpoint(
         tops, bottoms, alg = Arnoldi(),
         ρ0 = initialize_right_fixedpoint(tops, bottoms),
+        allocator = DefaultAllocator(),
     )
     _, vecs, info = eigsolve(ρ0, 1, :LM, alg) do ρ
         return foldr(zip(tops, bottoms); init = ρ) do (top, bottom), ρ
-            return mps_transfer_right(ρ, top, bottom)
+            return mps_transfer_right(ρ, top, bottom, allocator)
         end
     end
     ignore_derivatives() do
@@ -141,15 +149,16 @@ function right_transfermatrix_fixedpoint(
     return first(vecs)
 end
 
-fix_relative_phases(env::CTMRGEnv, signs::CTMRGEnvGaugeTransform) = gauge_transform(env, signs)
+fix_relative_phases(env::CTMRGEnv, signs::CTMRGEnvGaugeTransform, allocator = DefaultAllocator()) =
+    gauge_transform(env, signs, allocator)
 
-function fix_relative_phases(env::C4vCTMRGEnv, signs::CTMRGEnvGaugeTransform)
+function fix_relative_phases(env::C4vCTMRGEnv, signs::CTMRGEnvGaugeTransform, allocator = DefaultAllocator())
     X, Xinv = signs.matrices, signs.inverses
     corners = map(env.corners) do C
-        return _gauge_transform_corner(C, X[WEST, 1, 1], Xinv[NORTH, 1, 1])
+        return absorb_left_right(C, X[WEST, 1, 1], Xinv[NORTH, 1, 1], allocator)
     end
     edges = map(eachcoordinate(env, 1:4)) do (dir, r, c)
-        return absorb_left_right(env.edges[dir, r, c], X[dir, r, c], Xinv[dir, r, c])
+        return absorb_left_right(env.edges[dir, r, c], X[dir, r, c], Xinv[dir, r, c], allocator)
     end
     return C4vCTMRGEnv(corners, edges)
 end
