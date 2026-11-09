@@ -66,15 +66,15 @@ end
 
 Instantiate enlarged corner as a `TensorMap`.
 """
-function TensorKit.TensorMap(Q::EnlargedCorner)
+function TensorKit.TensorMap(Q::EnlargedCorner, allocator)
     if Q.dir == NORTHWEST
-        return enlarge_northwest_corner(Q.E_1, Q.C, Q.E_2, Q.A)
+        return enlarge_northwest_corner(Q.E_1, Q.C, Q.E_2, Q.A, allocator)
     elseif Q.dir == NORTHEAST
-        return enlarge_northeast_corner(Q.E_1, Q.C, Q.E_2, Q.A)
+        return enlarge_northeast_corner(Q.E_1, Q.C, Q.E_2, Q.A, allocator)
     elseif Q.dir == SOUTHEAST
-        return enlarge_southeast_corner(Q.E_1, Q.C, Q.E_2, Q.A)
+        return enlarge_southeast_corner(Q.E_1, Q.C, Q.E_2, Q.A, allocator)
     elseif Q.dir == SOUTHWEST
-        return enlarge_southwest_corner(Q.E_1, Q.C, Q.E_2, Q.A)
+        return enlarge_southwest_corner(Q.E_1, Q.C, Q.E_2, Q.A, allocator)
     else
         throw(ArgumentError(lazy"Invalid direction $(Q.dir)"))
     end
@@ -434,13 +434,13 @@ function ColumnEnlargedCorner(env::AbstractCTMRGEnv, coordinates)
 end
 
 """
-    TensorMap(Q::ColumnEnlargedCorner)
+    TensorMap(Q::ColumnEnlargedCorner, allocator)
 
 Instantiate column-enlarged corner as a `TensorMap`.
 """
-function TensorKit.TensorMap(Q::ColumnEnlargedCorner)
+function TensorKit.TensorMap(Q::ColumnEnlargedCorner, allocator)
     if Q.dir == NORTHWEST
-        return column_enlarge_northwest_corner(Q.C, Q.E)
+        return column_enlarge_northwest_corner(Q.C, Q.E, allocator)
     else
         error("Not implemented.")
     end
