@@ -95,7 +95,7 @@ convergence_tensors(env::C4vCTMRGEnv, ::C4vCTMRG) =
 
 function ctmrg_iteration(network, env::C4vCTMRGEnv, alg::C4vCTMRG, allocator)
     projector_alg = alg.projector_alg
-    enlarged_corner = c4v_enlarge(network, env, projector_alg)
+    enlarged_corner = c4v_enlarge(network, env, projector_alg, allocator)
     projector, info = c4v_projector!(enlarged_corner, projector_alg)
     edge′ = c4v_renormalize_edge(network, env, projector, allocator)
     corner′ = c4v_renormalize_corner(edge′, projector, info, projector_alg, allocator)
@@ -103,7 +103,7 @@ function ctmrg_iteration(network, env::C4vCTMRGEnv, alg::C4vCTMRG, allocator)
 end
 
 """Report unsupported projector algorithms when enlarging a C₄ᵥ corner."""
-function c4v_enlarge(network, env, alg::ProjectorAlgorithm)
+function c4v_enlarge(network, env, alg::ProjectorAlgorithm, allocator)
     throw(ArgumentError("Unknown C4v projector algorithm $(typeof(alg))"))
 end
 

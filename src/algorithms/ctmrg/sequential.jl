@@ -98,8 +98,8 @@ function sequential_projectors(
     r′ = r - 1
     trunc = truncation_strategy(alg, edge(env, WEST, r′, c))
     alg´ = _set_decomposition_truncation(alg, trunc)
-    Q1 = TensorMap(EnlargedCorner(network, env, (SOUTHWEST, r, c)))
-    Q2 = TensorMap(EnlargedCorner(network, env, (NORTHWEST, r′, c)))
+    Q1 = TensorMap(EnlargedCorner(network, env, (SOUTHWEST, r, c)), allocator)
+    Q2 = TensorMap(EnlargedCorner(network, env, (NORTHWEST, r′, c)), allocator)
     return compute_projector((Q1, Q2), alg´, allocator)
 end
 function sequential_projectors(
@@ -112,10 +112,10 @@ function sequential_projectors(
     trunc = truncation_strategy(alg, env.edges[WEST, coordinate_nw[2:3]...])
     alg´ = _set_decomposition_truncation(alg, trunc)
     ec = (
-        TensorMap(EnlargedCorner(network, env, coordinate_se)),
-        TensorMap(EnlargedCorner(network, env, coordinate)),
-        TensorMap(EnlargedCorner(network, env, coordinate_nw)),
-        TensorMap(EnlargedCorner(network, env, coordinate_ne)),
+        TensorMap(EnlargedCorner(network, env, coordinate_se), allocator),
+        TensorMap(EnlargedCorner(network, env, coordinate), allocator),
+        TensorMap(EnlargedCorner(network, env, coordinate_nw), allocator),
+        TensorMap(EnlargedCorner(network, env, coordinate_ne), allocator),
     )
     return compute_projector(ec, alg´, allocator)
 end
