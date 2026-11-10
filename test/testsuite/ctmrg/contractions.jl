@@ -65,11 +65,12 @@ end
 function test_contractions(n::InfiniteSquareNetwork, env::CTMRGEnv)
     dirs_and_coordinates = eachcoordinate(n, 1:4)
 
+    allocator = default_allocator(n, SerialScheduler())
     # initialize dense and sparse enlarged corners
     sparse_enlarged_corners = map(dirs_and_coordinates) do co
         return EnlargedCorner(n, env, co)
     end
-    dense_enlarged_corners = map(TensorMap, sparse_enlarged_corners)
+    dense_enlarged_corners = map(c -> TensorMap(c, allocator), sparse_enlarged_corners)
 
     # initialize sparse and dense half-inifite environments
     sparse_halfinf_envs = map(dirs_and_coordinates) do co

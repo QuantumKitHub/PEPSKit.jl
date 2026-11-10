@@ -31,13 +31,11 @@ function renormalize_north_edge(E_north, P_left, P_right, A, allocator)
 end
 # specialize PartitionFunction to avoid permute(A)
 function renormalize_north_edge(E_north::CTMRG_PF_EdgeTensor, P_left, P_right, A::PFTensor, allocator)
-    return @tensor allocator = allocator begin
-        temp = permute(E_north, ((2, 1), (3,))) # impose D_N as 1st leg
-        PE[D_N D_E; χNW χ_E] := temp[D_N χNW; χNE] * P_left[χNE D_E; χ_E]
-        PEA[D_W χNW; D_S χ_E] := A[D_W D_S; D_N D_E] * PE[D_N D_E; χNW χ_E]
-        P_rightp = permute(P_right, ((1,), (3, 2)))
-        edge[χ_W D_S; χ_E] := P_rightp[χ_W; D_W χNW] * PEA[D_W χNW; D_S χ_E]
-    end
+    temp = permute(E_north, ((2, 1), (3,))) # impose D_N as 1st leg
+    P_rightp = permute(P_right, ((1,), (3, 2)))
+    return @tensor allocator = allocator edge[χ_W D_S; χ_E] :=
+        P_rightp[χ_W; D_W χNW] *
+        (A[D_W D_S; D_N D_E] * (temp[D_N χNW; χNE] * P_left[χNE D_E; χ_E]))
 end
 
 @generated function renormalize_north_edge(
@@ -102,12 +100,11 @@ function renormalize_east_edge(E_east, P_left, P_right, A, allocator)
 end
 # specialize PartitionFunction to avoid permute(A)
 function renormalize_east_edge(E_east::CTMRG_PF_EdgeTensor, P_left, P_right, A::PFTensor, allocator)
-    return @tensor allocator = allocator begin
-        temp = permute(P_right, ((3, 1), (2,)))  # impose D_N as 1st leg
-        PE[D_N D_E; χN χSE] := temp[D_N χN; χNE] * E_east[χNE D_E; χSE]
-        PEA[D_W χN; χSE D_S] := A[D_W D_S; D_N D_E] * PE[D_N D_E; χN χSE]
-        edge[χ_N D_W; χ_S] := PEA[D_W χ_N; χSE D_S] * P_left[χSE D_S; χ_S]
-    end
+    temp = permute(P_right, ((3, 1), (2,)))  # impose D_N as 1st leg
+    return @tensor allocator = allocator edge[χ_N D_W; χ_S] :=
+        A[D_W D_S; D_N D_E] *
+        (temp[D_N χ_N; χNE] * E_east[χNE D_E; χSE]) *
+        P_left[χSE D_S; χ_S]
 end
 
 @generated function renormalize_east_edge(
@@ -167,12 +164,12 @@ function renormalize_south_edge(E_south, P_left, P_right, A, allocator)
 end
 # specialize PartitionFunction to avoid permute(A)
 function renormalize_south_edge(E_south::CTMRG_PF_EdgeTensor, P_left, P_right, A::PFTensor, allocator)
-    return @tensor allocator = allocator begin
-        P_leftp = permute(P_left, ((3, 2), (1,)))  # impose χ_W as 1st leg
-        PE[χ_W χSE; D_W D_S] := P_leftp[χ_W D_W; χSW] * E_south[χSE D_S; χSW]
-        PEA[χ_W D_N; χSE D_E] := PE[χ_W χSE; D_W D_S] * A[D_W D_S; D_N D_E]
-        edge[χ_E D_N; χ_W] := PEA[χ_W D_N; χSE D_E] * P_right[χ_E; χSE D_E]
-    end
+    P_leftp = permute(P_left, ((3, 2), (1,)))  # impose χ_W as 1st leg
+    return @tensor allocator = allocator edge[χ_E D_N; χ_W] :=
+        P_leftp[χ_W D_W; χSW] *
+        E_south[χSE D_S; χSW] *
+        A[D_W D_S; D_N D_E] *
+        P_right[χ_E; χSE D_E]
 end
 
 @generated function renormalize_south_edge(
@@ -245,22 +242,19 @@ function renormalize_west_edge(
         E_west::CTMRG_PEPS_EdgeTensor, P_left, P_right, A::PEPSSandwich, allocator
     )
     # starting with P_bottom to save one permute in the end
-    return @tensor allocator = allocator begin
-        # already putting χE in front here to make next permute cheaper
-        PE[χS χNW DSb DWb; DSt DWt] := P_right[χS; χSW DSt DSb] * E_west[χSW DWt DWb; χNW]
-        PEket[χS χNW DNt DEt; DSb DWb d] :=
-            PE[χS χNW DSb DWb; DSt DWt] * ket(A)[d; DNt DEt DSt DWt]
-        corner[χS DEt DEb; χNW DNt DNb] :=
-            PEket[χS χNW DNt DEt; DSb DWb d] * conj(bra(A)[d; DNb DEb DSb DWb])
-        edge[χS DEt DEb; χN] := corner[χS DEt DEb; χNW DNt DNb] * P_left[χNW DNt DNb; χN]
-    end
+    return @tensor allocator = allocator edge[χS DEt DEb; χN] :=
+        P_right[χS; χSW DSt DSb] *
+        E_west[χSW DWt DWb; χNW] *
+        ket(A)[d; DNt DEt DSt DWt] *
+        conj(bra(A)[d; DNb DEb DSb DWb]) *
+        P_left[χNW DNt DNb; χN]
 end
 function renormalize_west_edge(E_west::CTMRG_PF_EdgeTensor, P_left, P_right, A::PFTensor, allocator)
-    return @tensor allocator = allocator begin
-        PE[χ_S χNW; D_W D_S] := P_right[χ_S; χSW D_S] * E_west[χSW D_W; χNW]
-        PEA[χ_S D_E; χNW D_N] := PE[χ_S χNW; D_W D_S] * A[D_W D_S; D_N D_E]
-        edge[χ_S D_E; χ_N] := PEA[χ_S D_E; χNW D_N] * P_left[χNW D_N; χ_N]
-    end
+    return @tensor allocator = allocator edge[χ_S D_E; χ_N] :=
+        P_right[χ_S; χSW D_S] *
+        E_west[χSW D_W; χNW] *
+        A[D_W D_S; D_N D_E] *
+        P_left[χNW D_N; χ_N]
 end
 
 @generated function renormalize_west_edge(

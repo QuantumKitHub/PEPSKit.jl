@@ -502,10 +502,10 @@ function _rrule(
     # sandwich through `constant_site` leaves the ket and bra cotangents unforced. The state
     # pullback runs once, after the solve, and gets its own tape.
     F_tracked = generate_symmetric_characteristic_equation(
-        C, E, U, UL; projector_alg = alg.projector_alg
+        C, E, U, UL, allocator; projector_alg = alg.projector_alg
     )
     F_untracked = generate_symmetric_characteristic_equation(
-        C, E, U, UL; projector_alg = alg.projector_alg, getsite = constant_site
+        C, E, U, UL, allocator; projector_alg = alg.projector_alg, getsite = constant_site
     )
     network = InfiniteSquareNetwork(state)
 
@@ -653,9 +653,9 @@ function PEPSKit._rrule(
     # Two tapes: the linear solve only uses the environment cotangents, so reading the
     # sandwiches through `constant_site` leaves the ket and bra cotangents unforced. The
     # state pullback runs once, after the solve, and gets its own tape.
-    F_tracked = generate_halfinfinite_characteristic_equation(is, U, V)
+    F_tracked = generate_halfinfinite_characteristic_equation(is, U, V, allocator)
     F_untracked = generate_halfinfinite_characteristic_equation(
-        is, U, V; getsite = constant_site
+        is, U, V, allocator; getsite = constant_site
     )
     network = InfiniteSquareNetwork(state)
 
