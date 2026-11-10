@@ -97,6 +97,8 @@ end
 function half_infinite_environment(ec_1::EnlargedCorner, ec_2::EnlargedCorner)
     return HalfInfiniteEnv(ec_1, ec_2)
 end
+half_infinite_environment(ec_1::EnlargedCorner, ec_2::EnlargedCorner, allocator) =
+    half_infinite_environment(ec_1, ec_2)
 
 # Compute left and right projectors sparsely without constructing enlarged corners explicitly
 function contract_projectors(U, S, V, Q::EnlargedCorner, Q_next::EnlargedCorner, allocator)
