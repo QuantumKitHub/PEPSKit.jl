@@ -12,7 +12,7 @@ the second signature yields a bilayer contraction instead.
 """
 function MPSKit.expectation_value(
         bra::S, O::LocalOperator, ket::S, env;
-        allocator = default_allocator(bra, SerialScheduler())
+        allocator = scheduler_allocator(bra)
     ) where {S <: InfiniteState}
     checklattice(bra, O, ket)
     term_vals = dtmap(collect(O.terms)) do (inds, operator)  # OhMyThreads can't iterate over O.terms directly
@@ -24,7 +24,7 @@ MPSKit.expectation_value(peps::InfinitePEPS, O::LocalOperator, env; kwargs...) =
     MPSKit.expectation_value(peps, O, peps, env; kwargs...)
 function MPSKit.expectation_value(
         state::InfinitePEPO, O::LocalOperator, env;
-        allocator = default_allocator(state, SerialScheduler())
+        allocator = scheduler_allocator(state)
     )
     checklattice(state, O)
     term_vals = dtmap(collect(O.terms)) do (inds, operator)  # OhMyThreads can't iterate over O.terms directly
