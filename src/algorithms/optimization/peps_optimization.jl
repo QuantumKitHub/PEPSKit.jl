@@ -233,7 +233,7 @@ function fixedpoint(
         (finalize!) = OptimKit._finalize!,
         hasconverged = OptimKit.DefaultHasConverged(alg.optimizer_alg.gradtol),
         shouldstop = OptimKit.DefaultShouldStop(alg.optimizer_alg.maxiter),
-        allocator = default_allocator(peps₀, SerialScheduler())
+        allocator = scheduler_allocator(peps₀)
     )
     # validate inputs
     check_input(fixedpoint, peps₀, env₀, alg)
