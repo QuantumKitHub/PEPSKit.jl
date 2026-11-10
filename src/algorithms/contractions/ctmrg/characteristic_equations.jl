@@ -21,9 +21,9 @@ const RightProjectors{TP} = Array{TP, 3} where {TP <: RightProjector}
 
 # north edge and its left projector
 function contract_EnVd(
-        En::EdgeTensor{S, 3}, Vd::LeftProjector{S, 3}, O::PEPSSandwich
+        En::EdgeTensor{S, 3}, Vd::LeftProjector{S, 3}, O::PEPSSandwich, allocator
     ) where {S}
-    @autoopt @tensor EnVd[χ_NNW D_W_a D_W_b D_S_a D_S_b; χ_E] :=
+    @autoopt @tensor allocator = allocator EnVd[χ_NNW D_W_a D_W_b D_S_a D_S_b; χ_E] :=
         Vd[χ_NNE D_E_a D_E_b; χ_E] *
         En[χ_NNW D_N_a D_N_b; χ_NNE] *
         ket(O)[d; D_N_a D_E_a D_S_a D_W_a] *
@@ -32,8 +32,8 @@ function contract_EnVd(
 end
 
 # northwest enlarged corner with its left projector
-function contract_EwCEnVd(Ew::EdgeTensor{S, 3}, C::CornerTensor{S}, EnVd::LeftProjector{S, 5}) where {S}
-    @autoopt @tensor EwCEnVd[χ_WSW D_S_a D_S_b; χ_E] :=
+function contract_EwCEnVd(Ew::EdgeTensor{S, 3}, C::CornerTensor{S}, EnVd::LeftProjector{S, 5}, allocator) where {S}
+    @autoopt @tensor allocator = allocator EwCEnVd[χ_WSW D_S_a D_S_b; χ_E] :=
         Ew[χ_WSW D_W_a D_W_b; χ_WNW] *
         C[χ_WNW; χ_NNW] *
         EnVd[χ_NNW D_W_a D_W_b D_S_a D_S_b; χ_E]
@@ -42,8 +42,8 @@ end
 
 # north edge renormalization
 # NOTE: will need to be rewritten in terms of tensor multiplication for (future) fermion support
-function contract_E´(Ud::RightProjector{S, 3}, EnVd::LeftProjector{S, 5}) where {S}
-    @tensor E´[-1 -2 -3; -4] := Ud[-1; 1 2 3] * EnVd[1 2 3 -2 -3; -4]
+function contract_E´(Ud::RightProjector{S, 3}, EnVd::LeftProjector{S, 5}, allocator) where {S}
+    @tensor allocator = allocator E´[-1 -2 -3; -4] := Ud[-1; 1 2 3] * EnVd[1 2 3 -2 -3; -4]
     return E´
 end
 
@@ -102,7 +102,8 @@ function generate_symmetric_characteristic_equation(
         Cfp::CornerTensor,
         Efp::EdgeTensor, # unused
         Ufp::LeftProjector,
-        ULfp::LeftProjector;
+        ULfp::LeftProjector,
+        allocator;
         projector_alg,
         getsite = getindex,
     )
@@ -127,8 +128,8 @@ function generate_symmetric_characteristic_equation(
 
         # evaluate partial contractions to reuse
         # north edge and its left projector
-        EnVd = contract_EnVd(E, U, O)
-        EwCEnVd = contract_EwCEnVd(Ep, C, EnVd)
+        EnVd = contract_EnVd(E, U, O, allocator)
+        EwCEnVd = contract_EwCEnVd(Ep, C, EnVd, allocator)
 
         # F1: corner
         C´ = Ud * EwCEnVd
@@ -137,7 +138,7 @@ function generate_symmetric_characteristic_equation(
         F1 = C´ / λ_C - C
 
         # F2: edge
-        E´ = contract_E´(Ud, EnVd)
+        E´ = contract_E´(Ud, EnVd, allocator)
         E´ = _project_hermitian(E´) # project output
         λ_E = dot(E, E´)
         F2 = E´ / λ_E - E
@@ -354,9 +355,9 @@ end
 # --------------------
 
 function contract_EPL(
-        E::EdgeTensor{S, 3}, PL::LeftProjector{S, 3}, O::PEPSSandwich,
+        E::EdgeTensor{S, 3}, PL::LeftProjector{S, 3}, O::PEPSSandwich, allocator
     ) where {S}
-    @autoopt @tensor eipl[χ_W D_W_above D_W_below D_S_above D_S_below; χ_S] :=
+    @autoopt @tensor allocator = allocator eipl[χ_W D_W_above D_W_below D_S_above D_S_below; χ_S] :=
         PL[χ_N D_E_above D_E_below; χ_S] *
         E[χ_W D_N_above D_N_below; χ_N] *
         ket(O)[d; D_N_above D_E_above D_S_above D_W_above] *
@@ -365,18 +366,18 @@ function contract_EPL(
 end
 
 function contract_EiCiEPL(
-        EiCi::EdgeTensor{S, 3}, EPL::LeftProjector{S, 5},
+        EiCi::EdgeTensor{S, 3}, EPL::LeftProjector{S, 5}, allocator
     ) where {S}
-    @tensor ecepl[-1 -2 -3; -4] :=
+    @tensor allocator = allocator ecepl[-1 -2 -3; -4] :=
         EPL[1 2 3 -2 -3; -4] *
         EiCi[-1 2 3; 1]
     return ecepl
 end
 
 function contract_PREPL(
-        PR::RightProjector{S, 3}, EPL::LeftProjector{S, 5},
+        PR::RightProjector{S, 3}, EPL::LeftProjector{S, 5}, allocator
     ) where {S}
-    @tensor E´[-1 -2 -3; -4] :=
+    @tensor allocator = allocator E´[-1 -2 -3; -4] :=
         PR[-1; 1 2 3] * EPL[1 2 3 -2 -3; -4]
     return E´
 end
@@ -404,7 +405,8 @@ function contract_halfinfinite_characteristic_equation(
         Ud::RightProjectors, Vd::LeftProjectors,
         iCi::CornerTensors,
         proj_u, proj_v,
-        iSfp::CornerTensors;
+        iSfp::CornerTensors,
+        allocator;
         getsite = getindex,
     )
     coordinates = eachcoordinate(n, 1:4)
@@ -417,7 +419,7 @@ function contract_halfinfinite_characteristic_equation(
     end
     envi = CTMRGEnv(iCi, E)
     EC = map(coordinates) do co
-        return TensorMap(_enlarged_corner(n, envi, co; getsite))
+        return TensorMap(_enlarged_corner(n, envi, co; getsite), allocator)
     end
     PR = map(coordinates) do co
         co′ = _proj_sinv_indices(co, nrows, ncols)
@@ -440,12 +442,12 @@ function contract_halfinfinite_characteristic_equation(
     end
     # pre-contract the top edge and its sandwich into the left projector
     EPL = map(coordinates) do co
-        return contract_EPL(E[_above(co, nrows, ncols)...], PL[co...], Or[co...])
+        return contract_EPL(E[_above(co, nrows, ncols)...], PL[co...], Or[co...], allocator)
     end
     # pre-contract the top-left corner and left edge into the previous to complete the
     # top-left enlarged corner
     EiCiEPL = map(coordinates) do co
-        return contract_EiCiEPL(EiCi[co...], EPL[co...])
+        return contract_EiCiEPL(EiCi[co...], EPL[co...], allocator)
     end
 
     # corners
@@ -458,7 +460,7 @@ function contract_halfinfinite_characteristic_equation(
 
     # edges
     F2 = map(coordinates) do co
-        E´ = contract_PREPL(PR[_left_projector(co, nrows, ncols)...], EPL[co...])
+        E´ = contract_PREPL(PR[_left_projector(co, nrows, ncols)...], EPL[co...], allocator)
         λ_E = dot(E[co...], E´)
         return E´ / λ_E - E[co...]
     end
@@ -491,7 +493,8 @@ end
         ::CTMRGAlgorithm{<:HalfInfiniteProjector},
         iSfp::CornerTensors,
         Ufp::LeftProjectors,
-        Vfp::RightProjectors;
+        Vfp::RightProjectors,
+        allocator;
         getsite = getindex,
     )
 
@@ -529,7 +532,8 @@ are differentiated at all; see [`PEPSKit.constant_site`](@ref).
 function generate_halfinfinite_characteristic_equation(
         iSfp::CornerTensors,
         Ufp::LeftProjectors,
-        Vfp::RightProjectors;
+        Vfp::RightProjectors,
+        allocator;
         getsite = getindex,
     )
 
@@ -594,7 +598,8 @@ function generate_halfinfinite_characteristic_equation(
             Ud, Vd,
             iCi,
             proj_u, proj_v,
-            iSfp;
+            iSfp,
+            allocator;
             getsite,
         )
 

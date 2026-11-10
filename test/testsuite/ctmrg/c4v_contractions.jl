@@ -51,10 +51,10 @@ function test_c4v_contractions(n::InfiniteSquareNetwork, env::C4vCTMRGEnv)
         for dir in (NORTHWEST, NORTHEAST, SOUTHEAST, SOUTHWEST)
             Q = EnlargedCorner(n, env, (dir, 1, 1))
             Q_ref = EnlargedCorner(n, env_ref, (dir, 1, 1))
-            @test TensorMap(Q) ≈ TensorMap(Q_ref)
+            @test TensorMap(Q, allocator) ≈ TensorMap(Q_ref, allocator)
         end
         for projector_alg in (C4vEighProjector(), C4vQRProjector())
-            @test c4v_enlarge(n, env, projector_alg) ≈ c4v_enlarge(n, env_ref, projector_alg)
+            @test c4v_enlarge(n, env, projector_alg, allocator) ≈ c4v_enlarge(n, env_ref, projector_alg, allocator)
         end
     end
 
