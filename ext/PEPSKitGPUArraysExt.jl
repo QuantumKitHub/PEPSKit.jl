@@ -33,7 +33,7 @@ end
 _maxabs_signed(a, b) = abs(a) > abs(b) ? a : abs(b) > abs(a) ? b : max(a, b)
 
 # override method in characteristic_equations to avoid a synchronizing copy
-function PEPSKit._generate_F(T::GPUTensorMap, T′::GPUTensorMap)
+function PEPSKit._generate_F(T::GPUTensorMap, T´::GPUTensorMap)
     λ_T = similarstoragetype(T)(undef, 1)
     dot(T, T´, λ_T)
     F1 = T´ ./ λ_T .- T

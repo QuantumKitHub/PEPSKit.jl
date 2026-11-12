@@ -48,8 +48,8 @@ function contract_E´(Ud::RightProjector{S, 3}, EnVd::LeftProjector{S, 5}) where
 end
 
 function _generate_F(T, T′)
-    λ_T = dot(T, C´)
-    F = T´ / λ_T - C
+    λ_T = dot(T, T′)
+    F = T′ / λ_T - T
     return λ_T, F
 end
 
@@ -139,12 +139,12 @@ function generate_symmetric_characteristic_equation(
         # F1: corner
         C´ = Ud * EwCEnVd
         C´ = project_hermitian(C´) # project output
-        λ_C, F1 = _generate_F(C, C′)
+        λ_C, F1 = _generate_F(C, C´)
 
         # F2: edge
         E´ = contract_E´(Ud, EnVd)
         E´ = _project_hermitian(E´) # project output
-        λ_E, F2 = _generate_F(E, E′)
+        λ_E, F2 = _generate_F(E, E´)
 
         # F3: u
         ULdEwCEnVd = ULd * EwCEnVd
