@@ -73,6 +73,8 @@ function fix_phases(env::AbstractCTMRGEnv, signs, corner_phases, edge_phases)
     return env_fixed_global
 end
 
+_nudge_prev(ρ) = add!!(randn!(similar(ρ)), ρ, 1, 1.0e-2)
+
 function compute_relative_phases(
         envfinal::AbstractCTMRGEnv{C, T}, envprev::AbstractCTMRGEnv{C, T}, ::ScramblingEnvGauge
     ) where {C, T}
@@ -101,7 +103,7 @@ function compute_relative_phases(
         # Find right fixed points of mixed transfer matrices
         eigsolve_alg = Arnoldi()
         ρprev = right_transfermatrix_fixedpoint(Tsprev, M, eigsolve_alg)
-        ρfinal = right_transfermatrix_fixedpoint(Tsfinal, M, eigsolve_alg)
+        ρfinal = right_transfermatrix_fixedpoint(Tsfinal, M, eigsolve_alg, _nudge_prev(ρprev))
 
         # Decompose and multiply
         Qprev, = left_orth!(ρprev; positive = true)
@@ -125,7 +127,7 @@ function compute_relative_phases(envfinal::C4vCTMRGEnv{C, T}, envprev::C4vCTMRGE
     # Find right fixed points of mixed transfer matrices
     eigsolve_alg = Lanczos() # real eigenvalues
     ρprev = right_transfermatrix_fixedpoint([Tprev], [M], eigsolve_alg)
-    ρfinal = right_transfermatrix_fixedpoint([Tfinal], [M], eigsolve_alg)
+    ρfinal = right_transfermatrix_fixedpoint([Tfinal], [M], eigsolve_alg, _nudge_prev(ρprev))
 
     # Decompose and multiply
     Qprev, = left_orth!(ρprev; positive = true)
