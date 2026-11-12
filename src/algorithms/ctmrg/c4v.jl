@@ -73,7 +73,7 @@ end
 # present until CTMRG converges, so we need a fallback for the non-diagonal case.
 # gauge fix sign of spectrum such that the eigenvalue of largest magnitude is positive
 function corner_spectrum(C::AbstractTensorMap, ::C4vCTMRG)
-    S = eigh_vals(C)
+    S = eigh_vals(C, MatrixAlgebraKit.default_algorithm(eigh_vals!, C; check_hermiticity = false))
     if -minimum(S) > maximum(S)
         for (_, b) in blocks(S)
             b .= .-reverse(b) # spectrum of -C: negated and, to stay ascending, reversed
