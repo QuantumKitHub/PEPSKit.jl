@@ -32,6 +32,14 @@ function PEPSKit.corner_spectrum(C::GPUTensorMap, ::PEPSKit.C4vCTMRG)
 end
 _maxabs_signed(a, b) = abs(a) > abs(b) ? a : abs(b) > abs(a) ? b : max(a, b)
 
+function PEPSKit.compute_global_phases(envfix::AbstractCTMRGEnv{C, T}, envprev::AbstractCTMRGEnv{C, T}) where {C <: GPUTensorMap, T <: GPUTensorMap}
+    corner_phases = [similarstoragetype(first(envprev.corners))(undef, 1) for _ in 1:length(envprev.corners)]
+    edge_phases   = [similarstoragetype(first(envprev.edges))(undef, 1) for _ in 1:length(envprev.edges)]
+    dot.(envprev.corners, envfix.corners, corner_phases)
+    dot.(envprev.edges, envfix.edges, edge_phases)
+    return corner_phases, edge_phases
+end
+
 # if `m[1] < 0`, negate `x` and reverse it within each block; `offsets` are the sorted block start
 # positions followed by `length(x) + 1`
 @kernel function _flip_spectrum_kernel!(x, @Const(offsets), @Const(m))
