@@ -73,7 +73,7 @@ function fix_phases(env::AbstractCTMRGEnv, signs, corner_phases, edge_phases)
     return env_fixed_global
 end
 
-_nudge_prev(ρ) = add!!(randn!(similar(ρ)), ρ, 1, 1.0e-2)
+_nudge_prev(ρ) = VectorInterface.add!!(randn!(similar(ρ)), ρ, 1, 1.0e-2)
 
 function compute_relative_phases(
         envfinal::AbstractCTMRGEnv{C, T}, envprev::AbstractCTMRGEnv{C, T}, ::ScramblingEnvGauge
