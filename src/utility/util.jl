@@ -31,19 +31,18 @@ Compute `s^pow` for a diagonal matrix `s`.
 The result preserves the scalar and storage types of `s`.
 """
 function sdiag_pow(s::DiagonalTensorMap, pow::Real; tol::Real = eps(real(scalartype(s)))^(3 / 4))
-    tol *= _maxabs(s)
     spow = similar(s)
-    spow.data .= _safe_pow.(s.data, pow, tol)
+    spow.data .= _safe_pow.(s.data, pow, tol .* _maxabs(s))
     return spow
 end
 function sdiag_pow(
         s::AbstractTensorMap{T, S, 1, 1}, pow::Real; tol::Real = eps(real(scalartype(s)))^(3 / 4)
     ) where {T, S}
-    tol *= _maxabs(s)
+    max_s = _maxabs(s)
     spow = similar(s)
     for (k, b) in blocks(s)
         copyto!(
-            block(spow, k), LinearAlgebra.diagm(_safe_pow.(LinearAlgebra.diag(b), pow, tol))
+            block(spow, k), LinearAlgebra.diagm(_safe_pow.(LinearAlgebra.diag(b), pow, tol .* max_s))
         )
     end
     return spow
