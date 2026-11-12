@@ -6,7 +6,7 @@ using PEPSKit
 using LinearAlgebra
 using TensorKit
 using TensorKit: MatrixAlgebraKit as MAK
-import PEPSKit: _column_vectors, _materialize_block, _indexable_diagview
+import PEPSKit: _column_vectors, _materialize_block, _indexable_diagview, _generate_F
 
 PEPSKit._materialize_block(m::Union{Adjoint{T, A}, Transpose{T, A}}) where {T, A <: AnyGPUArray} = copyto!(similar(m, size(m)), m)
 function PEPSKit._column_vectors(::Type{A}, m::AbstractMatrix) where {A <: AnyGPUArray}
@@ -31,6 +31,14 @@ function PEPSKit.corner_spectrum(C::GPUTensorMap, ::PEPSKit.C4vCTMRG)
     return S
 end
 _maxabs_signed(a, b) = abs(a) > abs(b) ? a : abs(b) > abs(a) ? b : max(a, b)
+
+# override method in characteristic_equations to avoid a synchronizing copy
+function PEPSKit._generate_F(T::GPUTensorMap, T′::GPUTensorMap)
+    λ_T = similarstoragetype(T)(undef, 1)
+    dot(T, T´, λ_T)
+    F1 = T´ ./ λ_T .- T
+    return λ_T, F1
+end
 
 # if `m[1] < 0`, negate `x` and reverse it within each block; `offsets` are the sorted block start
 # positions followed by `length(x) + 1`
