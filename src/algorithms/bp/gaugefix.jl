@@ -29,7 +29,7 @@ here. The available algorithms are:
 end
 
 """
-    gauge_fix(psi::Union{InfinitePEPS, InfinitePEPO}, alg::BPGauge, env::BPEnv)
+    gauge_fix(psi::Union{InfinitePEPS, InfinitePEPO}, alg::BPGauge, env::BPEnv) -> psi′, gauge
 
 Fix the gauge of `psi` (which can be an [`InfinitePEPS`](@ref), or
 an [`InfinitePEPO`](@ref) interpreted as purified state with two physical legs) 
@@ -37,19 +37,18 @@ using fixed point environment `env` of belief propagation.
 """
 function gauge_fix(psi::InfinitePEPS, alg::BPGauge, env::BPEnv)
     bipartite = _is_bipartite(psi) && _is_bipartite(env)
-    psi′ = copy(psi)
     XXinv = map(eachcoordinate(psi, 1:2)) do I
-        _, X, Xinv = _bp_gauge_fix!(CartesianIndex(I), psi′, env, alg)
-        return X, Xinv
+        return _bp_gauge(CartesianIndex(I), env, alg)
     end
+    gauge = VirtualGaugeTransform(XXinv)
+    psi′ = gauge_transform(psi, gauge)
     if bipartite
-        # copy 1st column to 2nd column to eliminate differences
-        # caused by order of applying gauge transformations
+        # Enforce exact equality between equivalent sites.
         for r in 1:2
             psi′[r + 1, 2] = copy(psi′[r, 1])
         end
     end
-    return psi′, XXinv
+    return psi′, gauge
 end
 function gauge_fix(psi::InfinitePEPO, alg::BPGauge, env::BPEnv)
     # convert to iPEPS, and store physical leg fusers
@@ -59,15 +58,19 @@ function gauge_fix(psi::InfinitePEPO, alg::BPGauge, env::BPEnv)
         return fuse_physicalspaces(t)
     end
     psi_Fs = reshape(psi_Fs, (Nr, Nc))
-    psi′ = map(Base.Fix2(getindex, 1), psi_Fs)
-    Fs = map(Base.Fix2(getindex, 2), psi_Fs)
-    psi′, XXinv = gauge_fix(InfinitePEPS(psi′), alg, env)
+    psi′ = first.(psi_Fs)
+    Fs = last.(psi_Fs)
+    psi′, gauge = gauge_fix(InfinitePEPS(psi′), alg, env)
     # convert back to iPEPO
     psi′ = map(psi′.A, Fs) do t, F
         return F' * t
     end
     psi′ = reshape(psi′, (Nr, Nc, 1))
-    return InfinitePEPO(psi′), XXinv
+    gauge_dims = (2, Nr, Nc, 1)
+    gauge = VirtualGaugeTransform(
+        reshape(gauge.matrices, gauge_dims), reshape(gauge.inverses, gauge_dims)
+    )
+    return InfinitePEPO(psi′), gauge
 end
 
 function _sqrt_bp_messages(I::CartesianIndex{3}, env::BPEnv)
@@ -81,7 +84,7 @@ function _sqrt_bp_messages(I::CartesianIndex{3}, env::BPEnv)
 end
 
 """
-    _bp_gauge_fix!(I, psi::InfinitePEPS, env::BPEnv) -> psi, X, X⁻¹
+    _bp_gauge(I, env::BPEnv, alg::BPGauge) -> X, X⁻¹
 
 For the bond at direction `I[1]` (which can be `NORTH` or `EAST`)
 from site `I[2], I[3]`, we identify the following gauge matrices,
@@ -94,13 +97,10 @@ along the canonical direction of the PEPS arrows (`SOUTH ← NORTH` or `WEST ←
       = X X⁻¹
 ```
 
-Which are then used to update the gauge of `psi`. Thus, by convention `X` is attached to the `SOUTH`/`WEST` directions
-and `X⁻¹` is attached to the `NORTH`/`EAST` directions.
+These matrices update the gauge of `psi` using the [`VirtualGaugeTransform`](@ref) convention.
+`X` is attached to the `NORTH`/`EAST` leg at the indexed site, and `X⁻¹` to the neighboring `SOUTH`/`WEST` leg.
 """
-function _bp_gauge_fix!(I::CartesianIndex{3}, psi::InfinitePEPS, env::BPEnv, alg::BPGauge)
-    dir, row, col = Tuple(I)
-    @assert dir == NORTH || dir == EAST
-
+function _bp_gauge(I::CartesianIndex{3}, env::BPEnv, alg::BPGauge)
     sqrtM12, isqrtM12, sqrtM21, isqrtM21 = _sqrt_bp_messages(I, env)
     U, Λ, Vᴴ = svd_compact!(sqrtM12 * sqrtM21; alg = alg.svd_alg)
     sqrtΛ = sdiag_pow(Λ, 1 / 2)
@@ -109,14 +109,7 @@ function _bp_gauge_fix!(I::CartesianIndex{3}, psi::InfinitePEPS, env::BPEnv, alg
     if isdual(space(sqrtM12, 1))
         X, invX = twist(flip(X, 2), 1), flip(invX, 1)
     end
-    if dir == NORTH
-        psi[row, col] = absorb_north_message(psi[row, col], X)
-        psi[row - 1, col] = absorb_south_message(psi[row - 1, col], invX)
-    elseif dir == EAST
-        psi[row, col] = absorb_east_message(psi[row, col], X)
-        psi[row, col + 1] = absorb_west_message(psi[row, col + 1], invX)
-    end
-    return psi, X, invX
+    return X, invX
 end
 
 """

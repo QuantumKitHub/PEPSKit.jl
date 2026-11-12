@@ -4,7 +4,7 @@ using LinearAlgebra
 using TensorKit
 using PEPSKit
 using Adapt
-using PEPSKit: ctmrg_iteration, compute_gauge_fix_gauge, fix_relative_phases, ScramblingEnvGauge
+using PEPSKit: ctmrg_iteration, compute_gauge_fix_gauge, ScramblingEnvGauge
 
 # For half-integer U(1) charges, (-1)^{2Q} on the ket bonds negates the sandwich, so fixed
 # points come in pairs, one of which flips (C, E) to (-C, -E) every iteration. Both should converge.
@@ -29,7 +29,7 @@ end
 function iteration_sign(network, env, alg)
     env′, = ctmrg_iteration(network, env, alg)
     signs, = compute_gauge_fix_gauge(env′, env, ScramblingEnvGauge())
-    env′ = fix_relative_phases(env′, signs)
+    env′ = gauge_transform(env′, signs)
     return sign(real(dot(env.edges[1], env′.edges[1])))
 end
 
