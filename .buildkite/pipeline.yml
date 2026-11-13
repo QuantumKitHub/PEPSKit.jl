@@ -23,7 +23,7 @@ steps:
           - "1.13"
         queue:
           - "cuda"
-          #- "rocm" # disable for now as these are timing out 
+          - "rocm"
         group:
           - "boundarymps"
           - "bondenv"
