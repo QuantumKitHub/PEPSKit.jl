@@ -43,8 +43,8 @@ Compute the column-enlarged northwest corner for C₄ᵥ QR-CTMRG.
     ↓   |   
 ```
 """
-function c4v_enlarge(network, env, ::C4vQRProjector)
-    return TensorMap(ColumnEnlargedCorner(env, (NORTHWEST, 1, 1)))
+function c4v_enlarge(network, env, ::C4vQRProjector, allocator)
+    return TensorMap(ColumnEnlargedCorner(env, (NORTHWEST, 1, 1)), allocator)
 end
 
 """

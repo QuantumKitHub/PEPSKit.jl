@@ -216,7 +216,8 @@ function _rrule(
         ::typeof(MPSKit.leading_boundary),
         envinit::AbstractCTMRGEnv,
         state,
-        alg::CTMRGAlgorithm,
+        alg::CTMRGAlgorithm;
+        allocator = scheduler_allocator(state)
     )
     _check_algorithm_combination(alg, gradmode)
 
@@ -225,14 +226,14 @@ function _rrule(
     # prepare iterating function corresponding to a single gauge-fixed CTMRG iteration
     alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
     alg_gauge = _scrambling_env_gauge(alg) # select appropriate gauge-fixing algorithm
-    env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
-    signs, = compute_gauge_fix_gauge(env_conv, env, alg_gauge)
+    env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed, allocator)
+    signs, = compute_gauge_fix_gauge(env_conv, env, alg_gauge, allocator)
     # `p` for state, `x` for environment
     function gauge_fixed_iteration(p, x)
         # fix global phases relative to the fixed point inside the iteration
         return fix_global_phases(
-            fix_relative_phases(ctmrg_iteration(InfiniteSquareNetwork(p), x, alg_fixed)[1], signs),
-            env,
+            fix_relative_phases(ctmrg_iteration(InfiniteSquareNetwork(p), x, alg_fixed, allocator)[1], signs, allocator),
+            env, allocator
         )
     end
     # prepare its pullback
@@ -468,7 +469,8 @@ function _rrule(
         ::typeof(MPSKit.leading_boundary),
         envinit::C4vCTMRGEnv,
         state,
-        alg::C4vCTMRG,
+        alg::C4vCTMRG;
+        allocator = scheduler_allocator(state)
     )
     _check_algorithm_combination(alg, gradmode)
 
@@ -477,9 +479,9 @@ function _rrule(
     # prepare iterating function corresponding to a single gauge-fixed CTMRG iteration
     alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
     alg_gauge = _scrambling_env_gauge(alg) # select appropriate gauge-fixing algorithm
-    env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
-    signs, corner_phases, edge_phases = compute_gauge_fix_gauge(env_conv, env, alg_gauge)
-    env_fixed = fix_phases(env_conv, signs, corner_phases, edge_phases)
+    env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed, allocator)
+    signs, corner_phases, edge_phases = compute_gauge_fix_gauge(env_conv, env, alg_gauge, allocator)
+    env_fixed = fix_phases(env_conv, signs, corner_phases, edge_phases, allocator)
 
     # NOTE: explicitly keeping corner non-diagonal and (possibly) complex, for use in the backwards pass
     C, E = env_fixed.corners[NORTHWEST, 1, 1], env_fixed.edges[NORTH, 1, 1]
@@ -500,10 +502,10 @@ function _rrule(
     # sandwich through `constant_site` leaves the ket and bra cotangents unforced. The state
     # pullback runs once, after the solve, and gets its own tape.
     F_tracked = generate_symmetric_characteristic_equation(
-        C, E, U, UL; projector_alg = alg.projector_alg
+        C, E, U, UL, allocator; projector_alg = alg.projector_alg
     )
     F_untracked = generate_symmetric_characteristic_equation(
-        C, E, U, UL; projector_alg = alg.projector_alg, getsite = constant_site
+        C, E, U, UL, allocator; projector_alg = alg.projector_alg, getsite = constant_site
     )
     network = InfiniteSquareNetwork(state)
 
@@ -617,16 +619,17 @@ function PEPSKit._rrule(
         ::typeof(MPSKit.leading_boundary),
         envinit::AbstractCTMRGEnv,
         state,
-        alg::SimultaneousCTMRG{<:HalfInfiniteProjector},
+        alg::SimultaneousCTMRG{<:HalfInfiniteProjector};
+        allocator = scheduler_allocator(state)
     )
     env, = leading_boundary(envinit, state, alg)
 
     # gauge-fix SVD isometries
     alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
-    env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
-    signs, = compute_gauge_fix_gauge(env_conv, env, ScramblingEnvGauge())
+    env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed, allocator)
+    signs, = compute_gauge_fix_gauge(env_conv, env, ScramblingEnvGauge(), allocator)
     S = normalize.(info.S)
-    U, V = fix_relative_phases(info.U, info.V, signs)
+    U, V = fix_relative_phases(info.U, info.V, signs, allocator)
 
     # pretend the singular values matrices are just arbitrary complex tensors
     s = map(S) do s
@@ -650,9 +653,9 @@ function PEPSKit._rrule(
     # Two tapes: the linear solve only uses the environment cotangents, so reading the
     # sandwiches through `constant_site` leaves the ket and bra cotangents unforced. The
     # state pullback runs once, after the solve, and gets its own tape.
-    F_tracked = generate_halfinfinite_characteristic_equation(is, U, V)
+    F_tracked = generate_halfinfinite_characteristic_equation(is, U, V, allocator)
     F_untracked = generate_halfinfinite_characteristic_equation(
-        is, U, V; getsite = constant_site
+        is, U, V, allocator; getsite = constant_site
     )
     network = InfiniteSquareNetwork(state)
 

@@ -47,8 +47,8 @@ Compute the normalized and Hermitian-symmetrized C₄ᵥ enlarged corner.
     |   |
 ```
 """
-function c4v_enlarge(network, env, ::C4vEighProjector)
-    enlarged_corner = TensorMap(EnlargedCorner(network, env, (NORTHWEST, 1, 1)))
+function c4v_enlarge(network, env, ::C4vEighProjector, allocator)
+    enlarged_corner = TensorMap(EnlargedCorner(network, env, (NORTHWEST, 1, 1)), allocator)
     enlarged_corner = project_hermitian(enlarged_corner)
     return normalize(enlarged_corner)
 end

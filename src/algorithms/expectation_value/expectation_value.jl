@@ -2,8 +2,8 @@
 # ------------------------------------
 
 """
-    expectation_value(state, O::LocalOperator, env)
-    expectation_value(bra, O::LocalOperator, ket, env)
+    expectation_value(state, O::LocalOperator, env; allocator)
+    expectation_value(bra, O::LocalOperator, ket, env; allocator)
 
 Compute the expectation value ⟨bra|O|ket⟩ / ⟨bra|ket⟩ or tr(O * state) / tr(state) of a [`LocalOperator`](@ref) `O`.
 This can be done either for a PEPS, or alternatively for a density matrix PEPO.
@@ -11,19 +11,24 @@ In the latter case the first signature corresponds to a single layer PEPO contra
 the second signature yields a bilayer contraction instead.
 """
 function MPSKit.expectation_value(
-        bra::S, O::LocalOperator, ket::S, env
+        bra::S, O::LocalOperator, ket::S, env;
+        allocator = scheduler_allocator(bra)
     ) where {S <: InfiniteState}
     checklattice(bra, O, ket)
     term_vals = dtmap(collect(O.terms)) do (inds, operator)  # OhMyThreads can't iterate over O.terms directly
-        return local_expectation_value(inds, bra, operator, ket, env)
+        return local_expectation_value(inds, bra, operator, ket, env, allocator)
     end
     return sum(term_vals)
 end
-MPSKit.expectation_value(peps::InfinitePEPS, O::LocalOperator, env) = expectation_value(peps, O, peps, env)
-function MPSKit.expectation_value(state::InfinitePEPO, O::LocalOperator, env)
+MPSKit.expectation_value(peps::InfinitePEPS, O::LocalOperator, env; kwargs...) =
+    MPSKit.expectation_value(peps, O, peps, env; kwargs...)
+function MPSKit.expectation_value(
+        state::InfinitePEPO, O::LocalOperator, env;
+        allocator = scheduler_allocator(state)
+    )
     checklattice(state, O)
     term_vals = dtmap(collect(O.terms)) do (inds, operator)  # OhMyThreads can't iterate over O.terms directly
-        return local_expectation_value(inds, state, operator, env)
+        return local_expectation_value(inds, state, operator, env, allocator)
     end
     return sum(term_vals)
 end
@@ -33,8 +38,8 @@ end
 # ---------------------------------------------
 
 """
-    local_expectation_value(inds, bra, operator, ket, env)
-    local_expectation_value(inds, state, operator, env)
+    local_expectation_value(inds, bra, operator, ket, env, allocator)
+    local_expectation_value(inds, state, operator, env, allocator)
 
 Compute the contribution of a single term of a [`LocalOperator`](@ref) to the expectation
 value ⟨bra|O|ket⟩ / ⟨bra|ket⟩ or tr(O * state) / tr(state), where `operator` is the local
@@ -45,12 +50,12 @@ The implementation is overloaded based on the type of operator to be evaluated
 function local_expectation_value end
 
 # AbstractTensorMap evaluation goes through reduced density matrix
-function local_expectation_value(inds, bra, operator::AbstractTensorMap, ket, env)
-    ρ = reduced_densitymatrix(inds, ket, bra, env)
+function local_expectation_value(inds, bra, operator::AbstractTensorMap, ket, env, allocator)
+    ρ = reduced_densitymatrix(inds, ket, bra, env, allocator)
     return trmul(operator, ρ)
 end
-function local_expectation_value(inds, state, operator::AbstractTensorMap, env)
-    ρ = reduced_densitymatrix(inds, state, env)
+function local_expectation_value(inds, state, operator::AbstractTensorMap, env, allocator)
+    ρ = reduced_densitymatrix(inds, state, env, allocator)
     return trmul(operator, ρ)
 end
 
@@ -61,18 +66,18 @@ Compute the contribution of an [`MPOTerm`](@ref), including a [`TensorProductTer
 For a PEPS or purified PEPO, compute ``⟨bra|O|ket⟩ / ⟨bra|ket⟩``; for a single-layer density matrix PEPO, compute ``tr(O * state) / tr(state)``.
 Insert the factors into the patch contraction directly and divide by the local norm of the same patch.
 """
-function local_expectation_value(inds, bra, operator::MPOTerm, ket, env)
-    return contract_local_operator(inds, operator, ket, bra, env) /
-        contract_local_norm(inds, ket, bra, env)
+function local_expectation_value(inds, bra, operator::MPOTerm, ket, env, allocator)
+    return contract_local_operator(inds, operator, ket, bra, env, allocator) /
+        contract_local_norm(inds, ket, bra, env, allocator)
 end
-function local_expectation_value(inds, state, operator::MPOTerm, env)
-    return contract_local_operator(inds, operator, state, env) /
-        contract_local_norm(inds, state, env)
+function local_expectation_value(inds, state, operator::MPOTerm, env, allocator)
+    return contract_local_operator(inds, operator, state, env, allocator) /
+        contract_local_norm(inds, state, env, allocator)
 end
 
 # TODO: Implement boundary_contraction_expr for BPEnv to contract its messages directly.
-local_expectation_value(inds, bra, operator::MPOTerm, ket, env::BPEnv) =
-    local_expectation_value(inds, bra, operator, ket, CTMRGEnv(env))
+local_expectation_value(inds, bra, operator::MPOTerm, ket, env::BPEnv, allocator) =
+    local_expectation_value(inds, bra, operator, ket, CTMRGEnv(env), allocator)
 
 # Expectation value of a local partition function tensor
 # ------------------------------------------------------
@@ -91,13 +96,15 @@ convention.
 function MPSKit.expectation_value(
         pf::InfinitePartitionFunction,
         op::Pair{CartesianIndex{2}, <:AbstractTensorMap{T, S, 2, 2}},
-        env,
+        env;
+        allocator = default_allocator(pf, SerialScheduler())
     ) where {T, S}
-    return contract_local_tensor(op[1], op[2], env) /
-        contract_local_tensor(op[1], pf[op[1]], env)
+    return contract_local_tensor(op[1], op[2], env, allocator) /
+        contract_local_tensor(op[1], pf[op[1]], env, allocator)
 end
 function MPSKit.expectation_value(
-        pf::InfinitePartitionFunction, op::Pair{Tuple{Int, Int}}, env
+        pf::InfinitePartitionFunction, op::Pair{Tuple{Int, Int}}, env;
+        allocator = default_allocator(pf, SerialScheduler())
     )
-    return expectation_value(pf, CartesianIndex(op[1]) => op[2], env)
+    return expectation_value(pf, CartesianIndex(op[1]) => op[2], env; allocator)
 end

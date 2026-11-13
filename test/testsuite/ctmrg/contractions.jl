@@ -3,7 +3,7 @@ using Random
 using PEPSKit
 using TensorKit
 using Adapt
-using PEPSKit: eachcoordinate, _next_coordinate
+using PEPSKit: eachcoordinate, _next_coordinate, default_allocator, SerialScheduler
 using PEPSKit: EnlargedCorner, HalfInfiniteEnv, FullInfiniteEnv
 using PEPSKit: half_infinite_environment, full_infinite_environment
 using PEPSKit: simultaneous_projectors, contract_projectors
@@ -65,11 +65,12 @@ end
 function test_contractions(n::InfiniteSquareNetwork, env::CTMRGEnv)
     dirs_and_coordinates = eachcoordinate(n, 1:4)
 
+    allocator = default_allocator(n, SerialScheduler())
     # initialize dense and sparse enlarged corners
     sparse_enlarged_corners = map(dirs_and_coordinates) do co
         return EnlargedCorner(n, env, co)
     end
-    dense_enlarged_corners = map(TensorMap, sparse_enlarged_corners)
+    dense_enlarged_corners = map(c -> TensorMap(c, allocator), sparse_enlarged_corners)
 
     # initialize sparse and dense half-inifite environments
     sparse_halfinf_envs = map(dirs_and_coordinates) do co
@@ -115,13 +116,14 @@ function test_contractions(n::InfiniteSquareNetwork, env::CTMRGEnv)
         )
     end
 
+    allocator = default_allocator(env, SerialScheduler())
     # SVD half and full infinite environments
     (P_left_half, P_right_half), info_half = simultaneous_projectors(
-        dense_enlarged_corners, env, HalfInfiniteProjector()
+        dense_enlarged_corners, env, HalfInfiniteProjector(), allocator
     )
     U_half, S_half, V_half = info_half.U, info_half.S, info_half.V
     (P_left_full, P_right_full), info_full = simultaneous_projectors(
-        dense_enlarged_corners, env, FullInfiniteProjector()
+        dense_enlarged_corners, env, FullInfiniteProjector(), allocator
     )
     U_full, S_full, V_full = info_full.U, info_full.S, info_full.V
 
@@ -149,11 +151,11 @@ function test_contractions(n::InfiniteSquareNetwork, env::CTMRGEnv)
 
         # projector computation
         P_left_sparse, P_right_sparse = contract_projectors(
-            U_half[dir, r, c], S_half[dir, r, c], V_half[dir, r, c], shenv
+            U_half[dir, r, c], S_half[dir, r, c], V_half[dir, r, c], shenv, allocator
         )
         P_left_dense, P_right_dense = contract_projectors(
             U_half[dir, r, c], S_half[dir, r, c], V_half[dir, r, c],
-            dense_enlarged_corners[co...], dense_enlarged_corners[co2...],
+            dense_enlarged_corners[co...], dense_enlarged_corners[co2...], allocator
         )
         @test P_left_sparse ≈ P_left_dense
         @test P_right_sparse ≈ P_right_dense
@@ -176,7 +178,7 @@ function test_contractions(n::InfiniteSquareNetwork, env::CTMRGEnv)
 
         # projector computation
         P_left_sparse, P_right_sparse = contract_projectors(
-            U_full[dir, r, c], S_full[dir, r, c], V_full[dir, r, c], sfenv
+            U_full[dir, r, c], S_full[dir, r, c], V_full[dir, r, c], sfenv, allocator
         )
         P_left_dense, P_right_dense = contract_projectors(
             U_full[dir, r, c], S_full[dir, r, c], V_full[dir, r, c],
@@ -185,7 +187,7 @@ function test_contractions(n::InfiniteSquareNetwork, env::CTMRGEnv)
             ),
             half_infinite_environment(
                 dense_enlarged_corners[co2...], dense_enlarged_corners[co3...]
-            ),
+            ), allocator,
         )
         @test P_left_sparse ≈ P_left_dense
         @test P_right_sparse ≈ P_right_dense
@@ -199,10 +201,10 @@ function test_contractions(n::InfiniteSquareNetwork, env::CTMRGEnv)
         ## Corner renormalization
 
         C_sparse = renormalize_corner_fns[dir](
-            (r, c), sparse_enlarged_corners, P_left_half, P_right_half
+            (r, c), sparse_enlarged_corners, P_left_half, P_right_half, allocator
         )
         C_dense = renormalize_corner_fns[dir](
-            (r, c), dense_enlarged_corners, P_left_half, P_right_half
+            (r, c), dense_enlarged_corners, P_left_half, P_right_half, allocator
         )
         @test C_sparse ≈ C_dense
     end

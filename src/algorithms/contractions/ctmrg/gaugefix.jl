@@ -17,9 +17,9 @@ Multiply corner tensor with incoming and outgoing gauge signs.
 ```
 """
 function fix_gauge_corner(
-        corner::CTMRGCornerTensor, σ_out::CTMRGCornerTensor, σ_in::CTMRGCornerTensor
+        corner::CTMRGCornerTensor, σ_out::CTMRGCornerTensor, σ_in::CTMRGCornerTensor, allocator
     )
-    return @autoopt @tensor corner_fix[χ_out; χ_in] :=
+    return @autoopt @tensor allocator = allocator corner_fix[χ_out; χ_in] :=
         σ_out[χ_out; χ1] * corner[χ1; χ2] * conj(σ_in[χ_in; χ2])
 end
 
@@ -28,11 +28,12 @@ $(SIGNATURES)
 
 Apply `fix_gauge_corner` to the northwest corner with appropriate row and column indices.
 """
-function fix_gauge_northwest_corner((row, col), env::AbstractCTMRGEnv, signs)
+function fix_gauge_northwest_corner((row, col), env::AbstractCTMRGEnv, signs, allocator)
     return fix_gauge_corner(
         corner(env, NORTHWEST, row, col),
         signs[WEST, row, col],
         signs[NORTH, row, _next(col, end)],
+        allocator,
     )
 end
 
@@ -41,11 +42,12 @@ $(SIGNATURES)
 
 Apply `fix_gauge_corner` to the northeast corner with appropriate row and column indices.
 """
-function fix_gauge_northeast_corner((row, col), env::AbstractCTMRGEnv, signs)
+function fix_gauge_northeast_corner((row, col), env::AbstractCTMRGEnv, signs, allocator)
     return fix_gauge_corner(
         corner(env, NORTHEAST, row, col),
         signs[NORTH, row, col],
         signs[EAST, _next(row, end), col],
+        allocator,
     )
 end
 
@@ -54,11 +56,12 @@ $(SIGNATURES)
 
 Apply `fix_gauge_corner` to the southeast corner with appropriate row and column indices.
 """
-function fix_gauge_southeast_corner((row, col), env::AbstractCTMRGEnv, signs)
+function fix_gauge_southeast_corner((row, col), env::AbstractCTMRGEnv, signs, allocator)
     return fix_gauge_corner(
         corner(env, SOUTHEAST, row, col),
         signs[EAST, row, col],
         signs[SOUTH, row, _prev(col, end)],
+        allocator,
     )
 end
 
@@ -67,11 +70,12 @@ $(SIGNATURES)
 
 Apply `fix_gauge_corner` to the southwest corner with appropriate row and column indices.
 """
-function fix_gauge_southwest_corner((row, col), env::AbstractCTMRGEnv, signs)
+function fix_gauge_southwest_corner((row, col), env::AbstractCTMRGEnv, signs, allocator)
     return fix_gauge_corner(
         corner(env, SOUTHWEST, row, col),
         signs[SOUTH, row, col],
         signs[WEST, _prev(row, end), col],
+        allocator,
     )
 end
 
@@ -88,7 +92,7 @@ Multiply edge tensor with incoming and outgoing gauge signs.
 ```
 """
 @generated function fix_gauge_edge(
-        edge::CTMRGEdgeTensor{T, S, N}, σ_out::CTMRGCornerTensor, σ_in::CTMRGCornerTensor
+        edge::CTMRGEdgeTensor{T, S, N}, σ_out::CTMRGCornerTensor, σ_in::CTMRGCornerTensor, allocator
     ) where {T, S, N}
     edge_fix_e = tensorexpr(
         :edge_fix,
@@ -102,7 +106,7 @@ Multiply edge tensor with incoming and outgoing gauge signs.
     σ_in_e = tensorexpr(:σ_in, (envlabel(:in),), (envlabel(2),))
     return macroexpand(
         @__MODULE__,
-        :(return @autoopt @tensor $edge_fix_e := $σ_out_e * $edge_e * conj($σ_in_e)),
+        :(return @autoopt @tensor allocator = allocator $edge_fix_e := $σ_out_e * $edge_e * conj($σ_in_e)),
     )
 end
 
@@ -111,9 +115,9 @@ $(SIGNATURES)
 
 Apply `fix_gauge_edge` to the north edge with appropriate row and column indices.
 """
-function fix_gauge_north_edge((row, col), env::AbstractCTMRGEnv, signs)
+function fix_gauge_north_edge((row, col), env::AbstractCTMRGEnv, signs, allocator)
     return fix_gauge_edge(
-        edge(env, NORTH, row, col), signs[NORTH, row, col], signs[NORTH, row, _next(col, end)],
+        edge(env, NORTH, row, col), signs[NORTH, row, col], signs[NORTH, row, _next(col, end)], allocator
     )
 end
 
@@ -122,9 +126,9 @@ $(SIGNATURES)
 
 Apply `fix_gauge_edge` to the east edge with appropriate row and column indices.
 """
-function fix_gauge_east_edge((row, col), env::AbstractCTMRGEnv, signs)
+function fix_gauge_east_edge((row, col), env::AbstractCTMRGEnv, signs, allocator)
     return fix_gauge_edge(
-        edge(env, EAST, row, col), signs[EAST, row, col], signs[EAST, _next(row, end), col]
+        edge(env, EAST, row, col), signs[EAST, row, col], signs[EAST, _next(row, end), col], allocator
     )
 end
 
@@ -133,9 +137,9 @@ $(SIGNATURES)
 
 Apply `fix_gauge_edge` to the south edge with appropriate row and column indices.
 """
-function fix_gauge_south_edge((row, col), env::AbstractCTMRGEnv, signs)
+function fix_gauge_south_edge((row, col), env::AbstractCTMRGEnv, signs, allocator)
     return fix_gauge_edge(
-        edge(env, SOUTH, row, col), signs[SOUTH, row, col], signs[SOUTH, row, _prev(col, end)],
+        edge(env, SOUTH, row, col), signs[SOUTH, row, col], signs[SOUTH, row, _prev(col, end)], allocator
     )
 end
 
@@ -144,9 +148,9 @@ $(SIGNATURES)
 
 Apply `fix_gauge_edge` to the west edge with appropriate row and column indices.
 """
-function fix_gauge_west_edge((row, col), env::AbstractCTMRGEnv, signs)
+function fix_gauge_west_edge((row, col), env::AbstractCTMRGEnv, signs, allocator)
     return fix_gauge_edge(
-        edge(env, WEST, row, col), signs[WEST, row, col], signs[WEST, _prev(row, end), col]
+        edge(env, WEST, row, col), signs[WEST, row, col], signs[WEST, _prev(row, end), col], allocator
     )
 end
 

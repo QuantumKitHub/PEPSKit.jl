@@ -5,7 +5,7 @@ using TensorKit
 using Adapt
 using PEPSKit: EnlargedCorner, c4v_enlarge, c4v_projector!
 using PEPSKit: _contract_site, _contract_corners, _contract_vertical_edges,
-    _contract_horizontal_edges
+    _contract_horizontal_edges, default_allocator, SerialScheduler
 using PEPSKit: NORTH, EAST, SOUTH, WEST, NORTHWEST, NORTHEAST, SOUTHEAST, SOUTHWEST
 
 stype = ComplexF64
@@ -37,35 +37,36 @@ function test_c4v_contractions(n::InfiniteSquareNetwork, env::C4vCTMRGEnv)
     env_ref = _expand_c4v_env(env)
     ind = (1, 1)
 
+    allocator = PEPSKit.default_allocator(n, SerialScheduler())
     @testset "Network value contractions" begin
-        @test _contract_site(ind, n, env) ≈ _contract_site(ind, n, env_ref)
-        @test _contract_corners(ind, env) ≈ _contract_corners(ind, env_ref)
-        @test _contract_vertical_edges(ind, env) ≈ _contract_vertical_edges(ind, env_ref)
-        @test _contract_horizontal_edges(ind, env) ≈ _contract_horizontal_edges(ind, env_ref)
-        @test network_value(n, env) ≈ network_value(n, env_ref)
-        @test_throws AssertionError _contract_site((1, 2), n, env)
+        @test _contract_site(ind, n, env, allocator) ≈ _contract_site(ind, n, env_ref, allocator)
+        @test _contract_corners(ind, env, allocator) ≈ _contract_corners(ind, env_ref, allocator)
+        @test _contract_vertical_edges(ind, env, allocator) ≈ _contract_vertical_edges(ind, env_ref, allocator)
+        @test _contract_horizontal_edges(ind, env, allocator) ≈ _contract_horizontal_edges(ind, env_ref, allocator)
+        @test network_value(n, env, allocator) ≈ network_value(n, env_ref, allocator)
+        @test_throws AssertionError _contract_site((1, 2), n, env, allocator)
     end
 
     @testset "Enlarged corners" begin
         for dir in (NORTHWEST, NORTHEAST, SOUTHEAST, SOUTHWEST)
             Q = EnlargedCorner(n, env, (dir, 1, 1))
             Q_ref = EnlargedCorner(n, env_ref, (dir, 1, 1))
-            @test TensorMap(Q) ≈ TensorMap(Q_ref)
+            @test TensorMap(Q, allocator) ≈ TensorMap(Q_ref, allocator)
         end
         for projector_alg in (C4vEighProjector(), C4vQRProjector())
-            @test c4v_enlarge(n, env, projector_alg) ≈ c4v_enlarge(n, env_ref, projector_alg)
+            @test c4v_enlarge(n, env, projector_alg, allocator) ≈ c4v_enlarge(n, env_ref, projector_alg, allocator)
         end
     end
 
     @testset "Rotations" begin
-        nv = network_value(n, env)
+        nv = network_value(n, env, allocator)
         for rot in (rotl90, rotr90, rot180)
             env_rot = rot(env)
             env_ref_rot = rot(env_ref)
             @test env_rot isa C4vCTMRGEnv
             @test size(env_rot.edges) == (4, 1, 1)
             @test all(env_rot.edges .≈ env_ref_rot.edges)
-            @test network_value(rot(n), env_rot) ≈ nv
+            @test network_value(rot(n), env_rot, allocator) ≈ nv
         end
         @test rotl90(rotr90(env)) ≈ env
         @test rot180(rot180(env)) ≈ env
@@ -151,10 +152,11 @@ function test_c4v_ctmrg_contractions(AT, P, V, Venv)
     @testset "C4v environment after one CTMRG iteration" begin
         peps = _random_c4v_peps(AT, P, V)
         n = InfiniteSquareNetwork(peps)
+        allocator = PEPSKit.default_allocator(n, SerialScheduler())
         env₀ = initialize_random_c4v_env(peps, Venv)
         for projector_alg in (:C4vEighProjector, :C4vQRProjector)
             alg = C4vCTMRG(; projector_alg)
-            env, = PEPSKit.ctmrg_iteration(n, env₀, alg)
+            env, = PEPSKit.ctmrg_iteration(n, env₀, alg, allocator)
             @test env isa C4vCTMRGEnv
             test_c4v_contractions(n, env)
         end

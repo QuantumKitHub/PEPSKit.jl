@@ -34,36 +34,28 @@ coordinates, environments and network, or by directly providing the tensors.
 """
 function enlarge_northwest_corner(
         E_west::CTMRG_PEPS_EdgeTensor, C_northwest::CTMRGCornerTensor,
-        E_north::CTMRG_PEPS_EdgeTensor, A::PEPSSandwich,
+        E_north::CTMRG_PEPS_EdgeTensor, A::PEPSSandwich, allocator
     )
-    @tensor begin
-        EC[χS DWt DWb; χ2] := E_west[χS DWt DWb; χ1] * C_northwest[χ1; χ2]
-        # already putting χE in front here to make next permute cheaper
-        ECE[χS χE DWb DNb; DWt DNt] := EC[χS DWt DWb; χ2] * E_north[χ2 DNt DNb; χE]
-        ECEket[χS χE DEt DSt; DWb DNb d] :=
-            ECE[χS χE DWb DNb; DWt DNt] * ket(A)[d; DNt DEt DSt DWt]
-        corner[χS DSt DSb; χE DEt DEb] :=
-            ECEket[χS χE DEt DSt; DWb DNb d] * conj(bra(A)[d; DNb DEb DSb DWb])
-    end
-    return corner
+    return @tensor allocator = allocator corner[χS DSt DSb; χE DEt DEb] :=
+        E_west[χS DWt DWb; χ1] *
+        C_northwest[χ1; χ2] *
+        E_north[χ2 DNt DNb; χE] *
+        ket(A)[d; DNt DEt DSt DWt] *
+        conj(bra(A)[d; DNb DEb DSb DWb])
 end
 function enlarge_northwest_corner(
         E_west::CTMRG_PF_EdgeTensor, C_northwest::CTMRGCornerTensor,
-        E_north::CTMRG_PF_EdgeTensor, A::PFTensor,
+        E_north::CTMRG_PF_EdgeTensor, A::PFTensor, allocator
     )
-    @tensor begin
-        EC[χ_S DW; χ2] := E_west[χ_S DW; χ1] * C_northwest[χ1; χ2]
-        ECE[χ_S χ_E; DW DN] := EC[χ_S DW; χ2] * E_north[χ2 DN; χ_E]
-        corner[χ_S D_S; χ_E D_E] := ECE[χ_S χ_E; DW DN] * A[DW D_S; DN D_E]
-    end
-    return corner
+    return @tensor allocator = allocator corner[χ_S D_S; χ_E D_E] :=
+        E_west[χ_S DW; χ1] * C_northwest[χ1; χ2] * E_north[χ2 DN; χ_E] * A[DW D_S; DN D_E]
 end
 
 @generated function enlarge_northwest_corner(
         E_west::CTMRGEdgeTensor{T, S, N},
         C_northwest::CTMRGCornerTensor,
         E_north::CTMRGEdgeTensor{T, S, N},
-        O::PEPOSandwich{H},
+        O::PEPOSandwich{H}, allocator
     ) where {T, S, N, H}
     @assert N == H + 3
 
@@ -81,7 +73,7 @@ end
         pepo_es...,
     )
 
-    return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor allocator = allocator $C_out_e := $rhs))
 end
 
 # Northeast corner
@@ -103,36 +95,29 @@ coordinates, environments and network, or by directly providing the tensors.
 """
 function enlarge_northeast_corner(
         E_north::CTMRG_PEPS_EdgeTensor, C_northeast::CTMRGCornerTensor,
-        E_east::CTMRG_PEPS_EdgeTensor, A::PEPSSandwich,
+        E_east::CTMRG_PEPS_EdgeTensor, A::PEPSSandwich, allocator
     )
-    @tensor begin
-        EC[χW DNt DNb; χ2] := E_north[χW DNt DNb; χ1] * C_northeast[χ1; χ2]
-        # already putting χE in front here to make next permute cheaper
-        ECE[χW χS DNb DEb; DNt DEt] := EC[χW DNt DNb; χ2] * E_east[χ2 DEt DEb; χS]
-        ECEket[χW χS DSt DWt; DNb DEb d] :=
-            ECE[χW χS DNb DEb; DNt DEt] * ket(A)[d; DNt DEt DSt DWt]
-        corner[χW DWt DWb; χS DSt DSb] :=
-            ECEket[χW χS DSt DWt; DNb DEb d] * conj(bra(A)[d; DNb DEb DSb DWb])
-    end
-    return corner
+    return @tensor allocator = allocator corner[χW DWt DWb; χS DSt DSb] :=
+        E_north[χW DNt DNb; χ1] *
+        C_northeast[χ1; χ2] *
+        E_east[χ2 DEt DEb; χS] *
+        ket(A)[d; DNt DEt DSt DWt] *
+        conj(bra(A)[d; DNb DEb DSb DWb])
 end
 function enlarge_northeast_corner(
         E_north::CTMRG_PF_EdgeTensor, C_northeast::CTMRGCornerTensor,
-        E_east::CTMRG_PF_EdgeTensor, A::PFTensor,
+        E_east::CTMRG_PF_EdgeTensor, A::PFTensor, allocator
     )
-    @tensor begin
-        EC[DN χ_W; χ2] := E_north[χ_W DN; χ1] * C_northeast[χ1; χ2]
-        ECE[DN DE; χ_S χ_W] := EC[DN χ_W; χ2] * E_east[χ2 DE; χ_S]
-        corner[χ_W D_W; χ_S D_S] := A[D_W D_S; DN DE] * ECE[DN DE; χ_S χ_W]
-    end
-    return corner
+    return @tensor allocator = allocator corner[χ_W D_W; χ_S D_S] :=
+        A[D_W D_S; DN DE] *
+        (E_north[χ_W DN; χ1] * C_northeast[χ1; χ2] * E_east[χ2 DE; χ_S])
 end
 
 @generated function enlarge_northeast_corner(
         E_north::CTMRGEdgeTensor{T, S, N},
         C_northeast::CTMRGCornerTensor,
         E_east::CTMRGEdgeTensor{T, S, N},
-        O::PEPOSandwich{H},
+        O::PEPOSandwich{H}, allocator
     ) where {T, S, N, H}
     @assert N == H + 3
 
@@ -150,7 +135,7 @@ end
         pepo_es...,
     )
 
-    return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor allocator = allocator $C_out_e := $rhs))
 end
 
 # Southeast corner
@@ -172,36 +157,28 @@ coordinates, environments and network, or by directly providing the tensors.
 """
 function enlarge_southeast_corner(
         E_east::CTMRG_PEPS_EdgeTensor, C_southeast::CTMRGCornerTensor,
-        E_south::CTMRG_PEPS_EdgeTensor, A::PEPSSandwich,
+        E_south::CTMRG_PEPS_EdgeTensor, A::PEPSSandwich, allocator
     )
-    @tensor begin
-        EC[χN DEt DEb; χ2] := E_east[χN DEt DEb; χ1] * C_southeast[χ1; χ2]
-        # already putting χE in front here to make next permute cheaper
-        ECE[χN χW DEb DSb; DEt DSt] := EC[χN DEt DEb; χ2] * E_south[χ2 DSt DSb; χW]
-        ECEket[χN χW DNt DWt; DEb DSb d] :=
-            ECE[χN χW DEb DSb; DEt DSt] * ket(A)[d; DNt DEt DSt DWt]
-        corner[χN DNt DNb; χW DWt DWb] :=
-            ECEket[χN χW DNt DWt; DEb DSb d] * conj(bra(A)[d; DNb DEb DSb DWb])
-    end
-    return corner
+    return @tensor allocator = allocator corner[χN DNt DNb; χW DWt DWb] :=
+        E_east[χN DEt DEb; χ1] *
+        C_southeast[χ1; χ2] *
+        E_south[χ2 DSt DSb; χW] *
+        ket(A)[d; DNt DEt DSt DWt] *
+        conj(bra(A)[d; DNb DEb DSb DWb])
 end
 function enlarge_southeast_corner(
         E_east::CTMRG_PF_EdgeTensor, C_southeast::CTMRGCornerTensor,
-        E_south::CTMRG_PF_EdgeTensor, A::PFTensor,
+        E_south::CTMRG_PF_EdgeTensor, A::PFTensor, allocator
     )
-    @tensor begin
-        EC[χ_N D1; χ2] := E_east[χ_N D1; χ1] * C_southeast[χ1; χ2]
-        ECE[χ_N χ_W; D1 D2] := EC[χ_N D1; χ2] * E_south[χ2 D2; χ_W]
-        corner[χ_N D_N; χ_W D_W] := ECE[χ_N χ_W; D1 D2] * A[D_W D2; D_N D1]
-    end
-    return corner
+    return @tensor allocator = allocator corner[χ_N D_N; χ_W D_W] :=
+        E_east[χ_N D1; χ1] * C_southeast[χ1; χ2] * E_south[χ2 D2; χ_W] * A[D_W D2; D_N D1]
 end
 
 @generated function enlarge_southeast_corner(
         E_east::CTMRGEdgeTensor{T, S, N},
         C_southeast::CTMRGCornerTensor,
         E_south::CTMRGEdgeTensor{T, S, N},
-        O::PEPOSandwich{H},
+        O::PEPOSandwich{H}, allocator
     ) where {T, S, N, H}
     @assert N == H + 3
 
@@ -219,7 +196,7 @@ end
         pepo_es...,
     )
 
-    return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor allocator = allocator $C_out_e := $rhs))
 end
 
 # Southwest corner
@@ -241,36 +218,28 @@ coordinates, environments and network, or by directly providing the tensors.
 """
 function enlarge_southwest_corner(
         E_south::CTMRG_PEPS_EdgeTensor, C_southwest::CTMRGCornerTensor,
-        E_west::CTMRG_PEPS_EdgeTensor, A::PEPSSandwich,
+        E_west::CTMRG_PEPS_EdgeTensor, A::PEPSSandwich, allocator
     )
-    @tensor begin
-        EC[χE DSt DSb; χ2] := E_south[χE DSt DSb; χ1] * C_southwest[χ1; χ2]
-        # already putting χE in front here to make next permute cheaper
-        ECE[χE χN DSb DWb; DSt DWt] := EC[χE DSt DSb; χ2] * E_west[χ2 DWt DWb; χN]
-        ECEket[χE χN DNt DEt; DSb DWb d] :=
-            ECE[χE χN DSb DWb; DSt DWt] * ket(A)[d; DNt DEt DSt DWt]
-        corner[χE DEt DEb; χN DNt DNb] :=
-            ECEket[χE χN DNt DEt; DSb DWb d] * conj(bra(A)[d; DNb DEb DSb DWb])
-    end
-    return corner
+    return @tensor allocator = allocator corner[χE DEt DEb; χN DNt DNb] :=
+        E_south[χE DSt DSb; χ1] *
+        C_southwest[χ1; χ2] *
+        E_west[χ2 DWt DWb; χN] *
+        ket(A)[d; DNt DEt DSt DWt] *
+        conj(bra(A)[d; DNb DEb DSb DWb])
 end
 function enlarge_southwest_corner(
         E_south::CTMRG_PF_EdgeTensor, C_southwest::CTMRGCornerTensor,
-        E_west::CTMRG_PF_EdgeTensor, A::PFTensor,
+        E_west::CTMRG_PF_EdgeTensor, A::PFTensor, allocator
     )
-    @tensor begin
-        EC[χ_E D1; χ2] := E_south[χ_E D1; χ1] * C_southwest[χ1; χ2]
-        ECE[χ_E χ_N; D2 D1] := EC[χ_E D1; χ2] * E_west[χ2 D2; χ_N]
-        corner[χ_E D_E; χ_N D_N] := ECE[χ_E χ_N; D2 D1] * A[D2 D1; D_N D_E]
-    end
-    return corner
+    return @tensor allocator = allocator corner[χ_E D_E; χ_N D_N] :=
+        E_south[χ_E D1; χ1] * C_southwest[χ1; χ2] * E_west[χ2 D2; χ_N] * A[D2 D1; D_N D_E]
 end
 
 @generated function enlarge_southwest_corner(
         E_south::CTMRGEdgeTensor{T, S, N},
         C_southwest::CTMRGCornerTensor,
         E_west::CTMRGEdgeTensor{T, S, N},
-        O::PEPOSandwich{H},
+        O::PEPOSandwich{H}, allocator
     ) where {T, S, N, H}
     @assert N == H + 3
 
@@ -288,5 +257,5 @@ end
         pepo_es...,
     )
 
-    return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor allocator = allocator $C_out_e := $rhs))
 end

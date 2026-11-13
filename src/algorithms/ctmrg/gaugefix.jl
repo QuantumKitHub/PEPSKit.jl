@@ -19,14 +19,14 @@ Given that the CTMRG run is converged, the returned environment will be
 element-wise converged to `envprev`.
 """
 function gauge_fix(
-        envfinal::AbstractCTMRGEnv{C, T}, envprev::AbstractCTMRGEnv{C, T}, alg::ScramblingEnvGauge
+        envfinal::AbstractCTMRGEnv{C, T}, envprev::AbstractCTMRGEnv{C, T}, alg::ScramblingEnvGauge, allocator
     ) where {C, T}
-    signs, corner_phases, edge_phases = compute_gauge_fix_gauge(envfinal, envprev, alg)
-    return fix_phases(envfinal, signs, corner_phases, edge_phases)
+    signs, corner_phases, edge_phases = compute_gauge_fix_gauge(envfinal, envprev, alg, allocator)
+    return fix_phases(envfinal, signs, corner_phases, edge_phases, allocator)
 end
 
 function compute_gauge_fix_gauge(
-        envfinal::CTMRGEnv{C, T}, envprev::CTMRGEnv{C, T}, alg::ScramblingEnvGauge
+        envfinal::CTMRGEnv{C, T}, envprev::CTMRGEnv{C, T}, alg::ScramblingEnvGauge, allocator
     ) where {C, T}
     # Check if spaces in envprev and envfinal are the same
     same_spaces = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
@@ -36,18 +36,18 @@ function compute_gauge_fix_gauge(
     all(same_spaces) || throw(ArgumentError("Spaces of envfinal and envprev are not the same"))
 
     # find relative phases
-    signs = compute_relative_phases(envfinal, envprev, alg)
+    signs = compute_relative_phases(envfinal, envprev, alg, allocator)
 
     # find additional global phases
     corner_phases, edge_phases = compute_global_phases(
-        fix_relative_phases(envfinal, signs), envprev
+        fix_relative_phases(envfinal, signs, allocator), envprev
     )
 
     return signs, corner_phases, edge_phases
 end
 
 function compute_gauge_fix_gauge(
-        envfinal::C4vCTMRGEnv{C, T}, envprev::C4vCTMRGEnv{C, T}, alg::ScramblingEnvGauge
+        envfinal::C4vCTMRGEnv{C, T}, envprev::C4vCTMRGEnv{C, T}, alg::ScramblingEnvGauge, allocator
     ) where {C, T}
     # Check if spaces in envprev and envfinal are the same
     same_spaces = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
@@ -57,24 +57,24 @@ function compute_gauge_fix_gauge(
     all(same_spaces) || throw(ArgumentError("Spaces of envfinal and envprev are not the same"))
 
     # find relative phases
-    signs = compute_relative_phases(envfinal, envprev, alg)
+    signs = compute_relative_phases(envfinal, envprev, alg, allocator)
 
     # find additional global phases
     corner_phases, edge_phases = compute_global_phases(
-        fix_relative_phases(envfinal, signs), envprev
+        fix_relative_phases(envfinal, signs, allocator), envprev
     )
 
     return signs, corner_phases, edge_phases
 end
 
-function fix_phases(env::AbstractCTMRGEnv, signs, corner_phases, edge_phases)
-    env_fixed_relative = fix_relative_phases(env, signs)
-    env_fixed_global = fix_global_phases(env_fixed_relative, corner_phases, edge_phases)
+function fix_phases(env::AbstractCTMRGEnv, signs, corner_phases, edge_phases, allocator)
+    env_fixed_relative = fix_relative_phases(env, signs, allocator)
+    env_fixed_global = fix_global_phases(env_fixed_relative, corner_phases, edge_phases, allocator)
     return env_fixed_global
 end
 
 function compute_relative_phases(
-        envfinal::AbstractCTMRGEnv{C, T}, envprev::AbstractCTMRGEnv{C, T}, ::ScramblingEnvGauge
+        envfinal::AbstractCTMRGEnv{C, T}, envprev::AbstractCTMRGEnv{C, T}, ::ScramblingEnvGauge, allocator
     ) where {C, T}
 
     signs = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
@@ -113,7 +113,7 @@ function compute_relative_phases(
     return signs
 end
 
-function compute_relative_phases(envfinal::C4vCTMRGEnv{C, T}, envprev::C4vCTMRGEnv{C, T}, ::ScramblingEnvGauge) where {C, T}
+function compute_relative_phases(envfinal::C4vCTMRGEnv{C, T}, envprev::C4vCTMRGEnv{C, T}, ::ScramblingEnvGauge, allocator) where {C, T}
     # "general" algorithm from https://arxiv.org/abs/2311.11894
     Tprev = envprev.edges[1, 1, 1]
     Tfinal = envfinal.edges[1, 1, 1]
@@ -146,13 +146,14 @@ end
 @generated function mps_transfer_right(
         v::AbstractTensorMap{<:Any, S, 1, N₁},
         A::GenericMPSTensor{S, N₂}, Abar::GenericMPSTensor{S, N₂},
+        allocator
     ) where {S, N₁, N₂}
     t_out = tensorexpr(:v, -1, -(2:(N₁ + 1)))
     t_top = tensorexpr(:A, (-1, reverse(3:(N₂ + 1))...), 1)
     t_bot = tensorexpr(:Abar, (-(N₁ + 1), reverse(3:(N₂ + 1))...), 2)
     t_in = tensorexpr(:v, 1, (-(2:N₁)..., 2))
     return macroexpand(
-        @__MODULE__, :(return @tensor $t_out := $t_top * conj($t_bot) * $t_in)
+        @__MODULE__, :(return @tensor allocator = allocator $t_out := $t_top * conj($t_bot) * $t_in)
     )
 end
 
@@ -165,10 +166,11 @@ end
 function right_transfermatrix_fixedpoint(
         tops, bottoms, alg = Arnoldi(),
         ρ0 = initialize_right_fixedpoint(tops, bottoms),
+        allocator = default_allocator(ρ0, SerialScheduler())
     )
     _, vecs, info = eigsolve(ρ0, 1, :LM, alg) do ρ
         return foldr(zip(tops, bottoms); init = ρ) do (top, bottom), ρ
-            return mps_transfer_right(ρ, top, bottom)
+            return mps_transfer_right(ρ, top, bottom, allocator)
         end
     end
     ignore_derivatives() do
@@ -178,56 +180,56 @@ function right_transfermatrix_fixedpoint(
 end
 
 # Explicit fixing of relative phases (doing this compactly in a loop is annoying)
-function fix_relative_phases(envfinal::CTMRGEnv, signs)
+function fix_relative_phases(envfinal::CTMRGEnv, signs, allocator)
     corners_fixed = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
         Cf = if dir == NORTHWEST
-            fix_gauge_northwest_corner((r, c), envfinal, signs)
+            fix_gauge_northwest_corner((r, c), envfinal, signs, allocator)
         elseif dir == NORTHEAST
-            fix_gauge_northeast_corner((r, c), envfinal, signs)
+            fix_gauge_northeast_corner((r, c), envfinal, signs, allocator)
         elseif dir == SOUTHEAST
-            fix_gauge_southeast_corner((r, c), envfinal, signs)
+            fix_gauge_southeast_corner((r, c), envfinal, signs, allocator)
         else # dir == SOUTHWEST
-            fix_gauge_southwest_corner((r, c), envfinal, signs)
+            fix_gauge_southwest_corner((r, c), envfinal, signs, allocator)
         end
         return Cf
     end
 
     edges_fixed = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
         Ef = if dir == NORTHWEST
-            fix_gauge_north_edge((r, c), envfinal, signs)
+            fix_gauge_north_edge((r, c), envfinal, signs, allocator)
         elseif dir == NORTHEAST
-            fix_gauge_east_edge((r, c), envfinal, signs)
+            fix_gauge_east_edge((r, c), envfinal, signs, allocator)
         elseif dir == SOUTHEAST
-            fix_gauge_south_edge((r, c), envfinal, signs)
+            fix_gauge_south_edge((r, c), envfinal, signs, allocator)
         else # dir == SOUTHWEST
-            fix_gauge_west_edge((r, c), envfinal, signs)
+            fix_gauge_west_edge((r, c), envfinal, signs, allocator)
         end
         return Ef
     end
 
     return CTMRGEnv(corners_fixed, edges_fixed)
 end
-function fix_relative_phases(envfinal::C4vCTMRGEnv, signs)
+function fix_relative_phases(envfinal::C4vCTMRGEnv, signs, allocator)
     # all corners are the same
     corner_fixed = map(eachcoordinate(envfinal, 1:1)) do (dir, r, c)
-        fix_gauge_northwest_corner((r, c), envfinal, signs)
+        fix_gauge_northwest_corner((r, c), envfinal, signs, allocator)
     end
     edges_fixed = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
         Ef = if dir == NORTHWEST
-            fix_gauge_north_edge((r, c), envfinal, signs)
+            fix_gauge_north_edge((r, c), envfinal, signs, allocator)
         elseif dir == NORTHEAST
-            fix_gauge_east_edge((r, c), envfinal, signs)
+            fix_gauge_east_edge((r, c), envfinal, signs, allocator)
         elseif dir == SOUTHEAST
-            fix_gauge_south_edge((r, c), envfinal, signs)
+            fix_gauge_south_edge((r, c), envfinal, signs, allocator)
         else # dir == SOUTHWEST
-            fix_gauge_west_edge((r, c), envfinal, signs)
+            fix_gauge_west_edge((r, c), envfinal, signs, allocator)
         end
         return Ef
     end
     return C4vCTMRGEnv(corner_fixed, edges_fixed)
 end
 function fix_relative_phases(
-        U::Array{Ut, 3}, V::Array{Vt, 3}, signs
+        U::Array{Ut, 3}, V::Array{Vt, 3}, signs, allocator
     ) where {Ut <: AbstractTensorMap, Vt <: AbstractTensorMap}
     U_fixed = map(eachindex(IndexCartesian(), U)) do I
         dir, r, c = Tuple(I)
@@ -267,16 +269,16 @@ Fix global multiplicative phase of the environment tensors. To that end, the dot
 between all corners and all edges are computed to obtain the global phase which is then
 divided out.
 """
-function fix_global_phases(envfix::AbstractCTMRGEnv, envprev::AbstractCTMRGEnv)
+function fix_global_phases(envfix::AbstractCTMRGEnv, envprev::AbstractCTMRGEnv, allocator)
     corner_phases, edge_phases = compute_global_phases(envfix, envprev)
-    return fix_global_phases(envfix, corner_phases, edge_phases)
+    return fix_global_phases(envfix, corner_phases, edge_phases, allocator)
 end
-function fix_global_phases(env::CTMRGEnv, corner_phases, edge_phases)
+function fix_global_phases(env::CTMRGEnv, corner_phases, edge_phases, allocator)
     cornersgfix = env.corners .* inv.(corner_phases)
     edgesgfix = env.edges .* inv.(edge_phases)
     return CTMRGEnv(cornersgfix, edgesgfix)
 end
-function fix_global_phases(env::C4vCTMRGEnv, corner_phases, edge_phases)
+function fix_global_phases(env::C4vCTMRGEnv, corner_phases, edge_phases, allocator)
     cornersgfix = env.corners .* inv.(corner_phases)
     edgesgfix = env.edges .* inv.(edge_phases)
     return C4vCTMRGEnv(cornersgfix, edgesgfix)
