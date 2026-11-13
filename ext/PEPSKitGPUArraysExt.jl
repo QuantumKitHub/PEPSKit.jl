@@ -20,7 +20,7 @@ const GPUTensorMap = TensorMap{<:LinearAlgebra.BlasFloat, <:Any, <:Any, <:Any, <
 _offsets(S::TensorKit.SectorDict) = Int32.(first.(values(S)))
 _offsets(S::AbstractDict) = sort!(Int32.(first.(values(S))))
 function PEPSKit.corner_spectrum(C::GPUTensorMap, ::PEPSKit.C4vCTMRG)
-    S = eigh_vals(C)
+    S = eigh_vals(C, MatrixAlgebraKit.default_algorithm(eigh_vals!, C; check_hermiticity = false))
     x = parent(S)
     isempty(x) && return S
     m = reduce(_maxabs_signed, x; dims = 1, init = zero(eltype(x)))

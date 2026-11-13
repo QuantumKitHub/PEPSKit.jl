@@ -588,7 +588,7 @@ function remove_inverse_roots(
             E[co...], sqS[co′...], sqS[co...]
         )
     end
-    return C′ ./ norm.(C′), E′ ./ norm.(E′)
+    return normalize.(C′), normalize.(E′)
 end
 
 # absorbing inverse roots of singular values into modified corners and edges to obtain
@@ -610,7 +610,7 @@ function absorb_inverse_roots(
         co′ = _edge_sinv_indices(co, nrows, ncols)
         return absorb_left_right(E[co...], isqS[co′...], isqS[co...])
     end
-    return C′ ./ norm.(C′), E′ ./ norm.(E′)
+    return normalize.(C′), normalize.(E′)
 end
 
 # unit cell indices for absorbing square roots of S or S⁻¹ into corners and edges

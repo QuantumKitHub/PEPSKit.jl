@@ -124,5 +124,5 @@ function product_peps(peps_args...; unitcell = (1, 1), noise_amp = 1.0e-2, state
     end
     prod_peps = InfinitePEPS(prod_tensors)
     ψ = prod_peps + noise_amp * noise_peps
-    return ψ / norm(ψ)
+    return normalize(ψ)
 end

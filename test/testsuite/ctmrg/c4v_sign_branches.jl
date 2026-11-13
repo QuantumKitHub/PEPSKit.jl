@@ -45,7 +45,7 @@ function ctmrg_c4v_sign_branches(AT)
         Random.seed!(sd)
         peps = InfinitePEPS(randn, Float64, physicalspace(H)[1, 1], V)
         symmetrize!(peps, RotateReflect())
-        peps = adapt(AT, InfinitePEPS(map(a -> a / norm(a), peps.A)))
+        peps = adapt(AT, InfinitePEPS(map(normalize, peps.A)))
         network = InfiniteSquareNetwork(peps)
         alg = C4vCTMRG(; tol, maxiter, projector_alg = :C4vEighProjector)
 

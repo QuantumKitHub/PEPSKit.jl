@@ -43,7 +43,7 @@ function compute_projector(enlarged_corners, alg::FullInfiniteProjector)
     # SVD full-infinite environment
     fullinf = full_infinite_environment(halfinf_left, halfinf_right)
     svd_alg = decomposition_algorithm(alg)
-    U, S, V, truncation_error = svd_trunc!(fullinf / norm(fullinf), svd_alg)
+    U, S, V, truncation_error = svd_trunc!(normalize(fullinf), svd_alg)
 
     # get some decomposition info
     truncation_error = truncation_error / norm(S) # normalize truncation error
