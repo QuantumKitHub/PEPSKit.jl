@@ -75,8 +75,12 @@ include("utility/initialization.jl")
 include("networks/tensors.jl")
 include("networks/local_sandwich.jl")
 include("networks/infinitesquarenetwork.jl")
+include("networks/tensors_triangular.jl")
+include("networks/local_triangular_sandwich.jl")
+include("networks/infinitetriangularnetwork.jl")
 
 include("states/infinitepeps.jl")
+include("states/infinitepepstriangular.jl")
 include("states/infinitepartitionfunction.jl")
 
 include("utility/symmetrization.jl")
@@ -92,6 +96,7 @@ include("operators/lattices/squarelattice.jl")
 include("operators/models.jl")
 
 include("environments/ctmrg_environments.jl")
+include("environments/ctmrg_environments_triangular.jl")
 include("environments/c4v_ctmrg_environments.jl")
 include("environments/vumps_environments.jl")
 include("environments/suweight.jl")
@@ -148,6 +153,17 @@ include("algorithms/truncation/fullenv_truncation.jl")
 include("algorithms/truncation/bond_tensor.jl")
 include("algorithms/truncation/bond_truncation.jl")
 
+include("algorithms/contractions/triangular_ctmrg/double_corner.jl")
+include("algorithms/contractions/triangular_ctmrg/renormalize_edge.jl")
+include("algorithms/contractions/triangular_ctmrg/halfinf_env.jl")
+include("algorithms/contractions/triangular_ctmrg/renormalize_corner.jl")
+include("algorithms/contractions/triangular_ctmrg/network_value.jl")
+include("algorithms/contractions/triangular_ctmrg/expectation_value.jl")
+include("algorithms/ctmrg_triangular/ctmrg.jl")
+include("algorithms/ctmrg_triangular/utility.jl")
+include("algorithms/ctmrg_triangular/simultaneous.jl")
+include("algorithms/ctmrg_triangular/gaugefix.jl")
+
 include("algorithms/compress/local.jl")
 
 include("algorithms/time_evolution/apply_gate.jl")
@@ -170,6 +186,7 @@ include("algorithms/expectation_value/network_value.jl")
 include("algorithms/expectation_value/correlator_adapters.jl")
 include("algorithms/expectation_value/correlators.jl")
 include("algorithms/toolbox.jl")
+include("algorithms/toolbox_triangular.jl")
 
 include("algorithms/optimization/implicit_differentiation.jl")
 include("algorithms/optimization/preconditioning.jl")
@@ -180,6 +197,7 @@ include("algorithms/select_algorithm.jl")
 using .Defaults: set_scheduler!
 export set_scheduler!
 export EighAdjoint, IterEigh, SVDAdjoint, IterSVD, OrthAdjoint, QRAdjoint
+export CTMRGEnvTriangular, SimultaneousCTMRGTriangular
 export C4vCTMRGEnv, CTMRGEnv, SequentialCTMRG, SimultaneousCTMRG
 export initialize_ctmrg_environment,
     RandomInitialization, ProductStateInitialization, ApplicationInitialization, IdentityInitialization
@@ -204,9 +222,10 @@ export ALSTruncation, FullEnvTruncation
 export SimpleUpdate
 export TimeEvolver, timestep, time_evolve
 
-export InfiniteSquareNetwork
+export InfiniteSquareNetwork, InfiniteTriangularNetwork
 export InfinitePartitionFunction
 export InfinitePEPS, InfiniteTransferPEPS
+export InfinitePEPSTriangular
 export SUWeight
 export InfinitePEPO, InfiniteTransferPEPO
 

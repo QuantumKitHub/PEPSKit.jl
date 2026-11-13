@@ -89,10 +89,10 @@ end
 function checklattice(::Type{Bool}, H1::LocalOperator, H2::LocalOperator)
     return physicalspace(H1) == physicalspace(H2)
 end
-function checklattice(::Type{Bool}, peps::InfinitePEPS, O::LocalOperator)
+function checklattice(::Type{Bool}, peps::Union{InfinitePEPS, InfinitePEPSTriangular}, O::LocalOperator)
     return physicalspace(peps) == physicalspace(O)
 end
-function checklattice(::Type{Bool}, H::LocalOperator, peps::InfinitePEPS)
+function checklattice(::Type{Bool}, H::LocalOperator, peps::Union{InfinitePEPS, InfinitePEPSTriangular})
     return checklattice(Bool, peps, H)
 end
 function checklattice(::Type{Bool}, pepo::InfinitePEPO, O::LocalOperator)
