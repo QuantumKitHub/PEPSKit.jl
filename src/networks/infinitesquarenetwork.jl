@@ -188,3 +188,13 @@ function ChainRulesCore.rrule(::typeof(rotr90), network::InfiniteSquareNetwork)
     end
     return network´, rotr90_pullback
 end
+
+function ChainRulesCore.rrule(::typeof(rot180), network::InfiniteSquareNetwork)
+    network´ = rot180(network)
+    function rot180_pullback(Δnetwork_)
+        Δnetwork = unthunk(Δnetwork_)
+        Δnetwork isa AbstractZero && return NoTangent(), ZeroTangent()
+        return NoTangent(), rot180(Δnetwork)
+    end
+    return network´, rot180_pullback
+end
