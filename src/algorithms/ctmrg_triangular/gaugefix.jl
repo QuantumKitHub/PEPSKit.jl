@@ -72,6 +72,11 @@ function fix_phases(env::CTMRGEnvTriangular, signs, corner_phases, edge_phases)
     return fix_global_phases(fix_relative_phases(env, signs), corner_phases, edge_phases)
 end
 
+function fix_global_phases(envfix::CTMRGEnvTriangular, envprev::CTMRGEnvTriangular)
+    corner_phases, edge_phases = compute_global_phases(envfix, envprev)
+    return fix_global_phases(envfix, corner_phases, edge_phases)
+end
+
 function calc_elementwise_convergence(envfinal::CTMRGEnvTriangular, envfix::CTMRGEnvTriangular; atol::Real = 1.0e-6)
     return max(norm(envfinal.C .- envfix.C, Inf), norm(envfinal.Ea .- envfix.Ea, Inf), norm(envfinal.Eb .- envfix.Eb, Inf))
 end
