@@ -222,7 +222,7 @@ function _rrule(
         gradmode::FixedPointGradient,
         config::RuleConfig,
         ::typeof(MPSKit.leading_boundary),
-        envinit::Union{CTMRGEnv, CTMRGEnvTriangular},
+        envinit::Union{AbstractCTMRGEnv, CTMRGEnvTriangular},
         state,
         alg::Union{CTMRGAlgorithm, CTMRGAlgorithmTriangular},
     )
