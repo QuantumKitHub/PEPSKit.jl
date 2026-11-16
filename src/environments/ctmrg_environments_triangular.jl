@@ -4,6 +4,8 @@ $(TYPEDEF)
 Triangular corner transfer-matrix environment, with one corner and two edge halves
 (`Ea` and `Eb`, also called Ta and Tb) for each of six directions at every site. The arrays
 are indexed as `[direction, row, column]`, with directions ordered `NW, NE, E, SE, SW, W`.
+The unit cell is periodic under the translations `(0, Ncols)` and `(Nrows, shift)`, see
+[`TriangularUnitCell`](@ref); it must match the unit cell of the state or network.
 
 ## Fields
 
@@ -11,7 +13,7 @@ $(TYPEDFIELDS)
 
 ## Constructors
 
-    CTMRGEnvTriangular(f, T, D, χspace; unitcell=(1, 1))
+    CTMRGEnvTriangular(f, T, D, χspace; unitcell=(1, 1), shift=0)
 
 Initialize normalized tensors using `f` and scalar type `T`, with uniform virtual
 space `D` and environment space `χspace`. For a PEPS with virtual space `V`, use
@@ -26,6 +28,13 @@ struct CTMRGEnvTriangular{TC, TA, TB}
     Ea::Array{TA, 3}
     "6 x rows x cols array of edge Tb tensors, where the first dimension specifies the spatial direction"
     Eb::Array{TB, 3}
+    "column shift of the unit cell, see [`TriangularUnitCell`](@ref)"
+    shift::Int
+    function CTMRGEnvTriangular(
+            C::Array{TC, 3}, Ea::Array{TA, 3}, Eb::Array{TB, 3}, shift::Integer = 0
+        ) where {TC, TA, TB}
+        return new{TC, TA, TB}(C, Ea, Eb, TriangularUnitCell(size(C)[2:3], shift).shift)
+    end
 end
 
 function get_Ds(D::A) where {A <: ProductSpace}
@@ -37,7 +46,7 @@ function get_Ds(D::A) where {A <: ElementarySpace}
 end
 
 function CTMRGEnvTriangular(
-        f, T, D::Union{A, B}, chis::B; unitcell::Tuple{Int, Int} = (1, 1)
+        f, T, D::Union{A, B}, chis::B; unitcell::Tuple{Int, Int} = (1, 1), shift::Integer = 0
     ) where {A <: ProductSpace, B <: ElementarySpace}
     Ds = get_Ds(D)
     N = length(Ds[1])
@@ -62,10 +71,12 @@ function CTMRGEnvTriangular(
         Eas[dir, r, c] = Ea
         Ebs[dir, r, c] = Eb
     end
-    return CTMRGEnvTriangular(Cs, Eas, Ebs)
+    return CTMRGEnvTriangular(Cs, Eas, Ebs, shift)
 end
 
 Base.size(env::CTMRGEnvTriangular, args...) = size(env.C, args...)
+_cell(env::CTMRGEnvTriangular) = TriangularUnitCell(size(env.C)[2:3], env.shift)
+@non_differentiable _cell(env::CTMRGEnvTriangular)
 Base.axes(x::CTMRGEnvTriangular, args...) = axes(x.C, args...)
 function eachcoordinate(x::CTMRGEnvTriangular)
     return collect(Iterators.product(axes(x, 2), axes(x, 3)))
@@ -73,8 +84,8 @@ end
 function eachcoordinate(x::CTMRGEnvTriangular, dirs)
     return collect(Iterators.product(dirs, axes(x, 2), axes(x, 3)))
 end
-Base.real(env::CTMRGEnvTriangular) = CTMRGEnvTriangular(real.(env.C), real.(env.Ea), real.(env.Eb))
-Base.complex(env::CTMRGEnvTriangular) = CTMRGEnvTriangular(complex.(env.C), complex.(env.Ea), complex.(env.Eb))
+Base.real(env::CTMRGEnvTriangular) = CTMRGEnvTriangular(real.(env.C), real.(env.Ea), real.(env.Eb), env.shift)
+Base.complex(env::CTMRGEnvTriangular) = CTMRGEnvTriangular(complex.(env.C), complex.(env.Ea), complex.(env.Eb), env.shift)
 
 cornertype(env::CTMRGEnvTriangular) = cornertype(typeof(env))
 cornertype(::Type{CTMRGEnvTriangular{C, A, B}}) where {C, A, B} = C
@@ -89,6 +100,7 @@ end
 
 # In-place update of environment
 function update!(env::CTMRGEnvTriangular{T}, env´::CTMRGEnvTriangular{T}) where {T}
+    _check_cells(env, env´)
     env.C .= env´.C
     env.Ea .= env´.Ea
     env.Eb .= env´.Eb
@@ -97,23 +109,23 @@ end
 
 # Custom adjoint for CTMRGEnvTriangular constructor, needed for fixed-point differentiation
 function ChainRulesCore.rrule(
-        ::Type{CTMRGEnvTriangular}, C::Array{T, 3}, Ea::Array{T, 3}, Eb::Array{T, 3}
+        ::Type{CTMRGEnvTriangular}, C::Array{T, 3}, Ea::Array{T, 3}, Eb::Array{T, 3}, shift::Integer = 0
     ) where {T}
     function triangularenv_pullback(Δenv_)
         Δenv = unthunk(Δenv_)
-        return NoTangent(), Δenv.C, Δenv.Ea, Δenv.Eb
+        return NoTangent(), Δenv.C, Δenv.Ea, Δenv.Eb, NoTangent()
     end
-    return CTMRGEnvTriangular(C, Ea, Eb), triangularenv_pullback
+    return CTMRGEnvTriangular(C, Ea, Eb, shift), triangularenv_pullback
 end
 
 # math basics used for tangent accumulation in backwards pass
 function Base.:+(e₁::CTMRGEnvTriangular, e₂::CTMRGEnvTriangular)
-    return CTMRGEnvTriangular(e₁.C + e₂.C, e₁.Ea + e₂.Ea, e₁.Eb + e₂.Eb)
+    return CTMRGEnvTriangular(e₁.C + e₂.C, e₁.Ea + e₂.Ea, e₁.Eb + e₂.Eb, e₁.shift)
 end
 function Base.:-(e₁::CTMRGEnvTriangular, e₂::CTMRGEnvTriangular)
-    return CTMRGEnvTriangular(e₁.C - e₂.C, e₁.Ea - e₂.Ea, e₁.Eb - e₂.Eb)
+    return CTMRGEnvTriangular(e₁.C - e₂.C, e₁.Ea - e₂.Ea, e₁.Eb - e₂.Eb, e₁.shift)
 end
-Base.:*(α::Number, e::CTMRGEnvTriangular) = CTMRGEnvTriangular(α * e.C, α * e.Ea, α * e.Eb)
+Base.:*(α::Number, e::CTMRGEnvTriangular) = CTMRGEnvTriangular(α * e.C, α * e.Ea, α * e.Eb, e.shift)
 
 # Custom adjoint for CTMRGEnvTriangular getproperty, to avoid creating named tuples in backward pass
 function ChainRulesCore.rrule(::typeof(getproperty), e::CTMRGEnvTriangular, name::Symbol)
@@ -121,21 +133,24 @@ function ChainRulesCore.rrule(::typeof(getproperty), e::CTMRGEnvTriangular, name
     if name === :C
         function C_pullback(ΔC_)
             ΔC = unthunk(ΔC_)
-            return NoTangent(), CTMRGEnvTriangular(ΔC, zerovector(e.Ea), zerovector(e.Eb)), NoTangent()
+            return NoTangent(), CTMRGEnvTriangular(ΔC, zerovector(e.Ea), zerovector(e.Eb), e.shift), NoTangent()
         end
         return result, C_pullback
     elseif name === :Ea
         function Ea_pullback(ΔEa_)
             ΔEa = unthunk(ΔEa_)
-            return NoTangent(), CTMRGEnvTriangular(zerovector(e.C), ΔEa, zerovector(e.Eb)), NoTangent()
+            return NoTangent(), CTMRGEnvTriangular(zerovector(e.C), ΔEa, zerovector(e.Eb), e.shift), NoTangent()
         end
         return result, Ea_pullback
     elseif name === :Eb
         function Eb_pullback(ΔEb_)
             ΔEb = unthunk(ΔEb_)
-            return NoTangent(), CTMRGEnvTriangular(zerovector(e.C), zerovector(e.Ea), ΔEb), NoTangent()
+            return NoTangent(), CTMRGEnvTriangular(zerovector(e.C), zerovector(e.Ea), ΔEb, e.shift), NoTangent()
         end
         return result, Eb_pullback
+    elseif name === :shift
+        shift_pullback(_) = (NoTangent(), NoTangent(), NoTangent())
+        return result, shift_pullback
     else
         # this should never happen because already errored in forwards pass
         throw(ArgumentError("No rrule for getproperty of $name"))
@@ -144,7 +159,7 @@ end
 
 function VI.zerovector(env::CTMRGEnvTriangular, ::Type{S}) where {S <: Number}
     _zerovector = Base.Fix2(zerovector, S)
-    return CTMRGEnvTriangular(map(_zerovector, env.C), map(_zerovector, env.Ea), map(_zerovector, env.Eb))
+    return CTMRGEnvTriangular(map(_zerovector, env.C), map(_zerovector, env.Ea), map(_zerovector, env.Eb), env.shift)
 end
 function VI.zerovector!(env::CTMRGEnvTriangular)
     foreach(zerovector!, env.C)
@@ -156,7 +171,7 @@ VI.zerovector!!(env::CTMRGEnvTriangular) = zerovector!(env)
 
 function VI.scale(env::CTMRGEnvTriangular, α::Number)
     _scale = Base.Fix2(scale, α)
-    return CTMRGEnvTriangular(map(_scale, env.C), map(_scale, env.Ea), map(_scale, env.Eb))
+    return CTMRGEnvTriangular(map(_scale, env.C), map(_scale, env.Ea), map(_scale, env.Eb), env.shift)
 end
 function VI.scale!(env::CTMRGEnvTriangular, α::Number)
     _scale! = Base.Fix2(scale!, α)
@@ -178,7 +193,7 @@ VI.scale!!(env₁::CTMRGEnvTriangular, env₂::CTMRGEnvTriangular, α::Number) =
 function VI.add(env₁::CTMRGEnvTriangular, env₂::CTMRGEnvTriangular, α::Number, β::Number)
     _add(x, y) = add(x, y, α, β)
     return CTMRGEnvTriangular(
-        map(_add, env₁.C, env₂.C), map(_add, env₁.Ea, env₂.Ea), map(_add, env₁.Eb, env₂.Eb)
+        map(_add, env₁.C, env₂.C), map(_add, env₁.Ea, env₂.Ea), map(_add, env₁.Eb, env₂.Eb), env₁.shift
     )
 end
 function VI.add!(env₁::CTMRGEnvTriangular, env₂::CTMRGEnvTriangular, α::Number, β::Number)

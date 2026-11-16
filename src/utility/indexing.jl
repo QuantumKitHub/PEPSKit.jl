@@ -98,3 +98,44 @@ Enumerate all (dir, row, col) pairs.
 function eachcoordinate end
 
 @non_differentiable eachcoordinate(args...)
+
+"""
+$(TYPEDEF)
+
+Geometry of a triangular-lattice unit cell, stored as an `Nrows × Ncols` matrix of sites
+`[r, c]`. The lattice is periodic under the translations `(0, Ncols)` and `(Nrows, shift)`,
+i.e. moving `Nrows` rows down and `shift` columns to the right returns to the same site.
+For `shift = 0`, this is the usual rectangular periodic unit cell.
+
+A nonzero `shift` allows unit cells that are not rectangular in `[r, c]` coordinates. For
+example, the three-sublattice (√3 × √3) structure `[A B C; C A B; B C A]` is stored as the
+`(1, 3)` unit cell `[A B C]` with `shift = 1`.
+
+## Fields
+
+$(TYPEDFIELDS)
+"""
+struct TriangularUnitCell
+    "number of rows and columns of the stored unit cell"
+    size::NTuple{2, Int}
+    "column shift accompanying a translation by `Nrows` rows"
+    shift::Int
+    function TriangularUnitCell(size::NTuple{2, Int}, shift::Integer = 0)
+        all(>(0), size) || throw(ArgumentError("unit cell size needs to be positive"))
+        return new(size, mod(shift, size[2]))
+    end
+end
+
+Base.size(cell::TriangularUnitCell) = cell.size
+
+"""
+    _site(cell::TriangularUnitCell, r::Int, c::Int) -> (r′, c′)
+
+Map the lattice site `[r, c]` to its representative `[r′, c′]` in the stored unit cell.
+"""
+@inline function _site(cell::TriangularUnitCell, r::Int, c::Int)
+    Nr, Nc = cell.size
+    k = fld(r - 1, Nr)
+    return (r - k * Nr, mod1(c - k * cell.shift, Nc))
+end
+@non_differentiable _site(args...)

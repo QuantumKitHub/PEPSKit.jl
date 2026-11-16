@@ -16,7 +16,7 @@ end
 # Follow the boundary tangent, alternating the two edge halves at each site.
 function _triangular_edge_chain(env::CTMRGEnvTriangular, dir, r, c)
     tensors = [env.Eb[dir, r, c], env.Ea[dir, r, c]]
-    unitcell = size(env)[2:3]
+    unitcell = _cell(env)
     _, r′, c′ = _coordinates(dir, 2, r, c, unitcell)
     while (r′, c′) != (r, c)
         push!(tensors, env.Eb[dir, r′, c′], env.Ea[dir, r′, c′])
@@ -42,7 +42,7 @@ function compute_relative_phases(envfinal::CTMRGEnvTriangular, envprev::CTMRGEnv
 end
 
 function fix_relative_phases(env::CTMRGEnvTriangular, signs)
-    unitcell = size(env)[2:3]
+    unitcell = _cell(env)
     # Triangular corners have the same tensor layout as the edge halves.
     C = map(eachcoordinate(env, 1:6)) do (dir, r, c)
         next = _coordinates(dir, 2, r, c, unitcell)
@@ -55,7 +55,7 @@ function fix_relative_phases(env::CTMRGEnvTriangular, signs)
     Eb = map(eachcoordinate(env, 1:6)) do (dir, r, c)
         return fix_gauge_edge(env.Eb[dir, r, c], signs.Eb[dir, r, c], signs.Ea[dir, r, c])
     end
-    return CTMRGEnvTriangular(C, Ea, Eb)
+    return CTMRGEnvTriangular(C, Ea, Eb, env.shift)
 end
 
 function compute_global_phases(envfix::CTMRGEnvTriangular, envprev::CTMRGEnvTriangular)
@@ -65,7 +65,7 @@ function compute_global_phases(envfix::CTMRGEnvTriangular, envprev::CTMRGEnvTria
 end
 
 function fix_global_phases(env::CTMRGEnvTriangular, corner_phases, edge_phases)
-    return CTMRGEnvTriangular(env.C .* inv.(corner_phases), env.Ea .* inv.(edge_phases.Ea), env.Eb .* inv.(edge_phases.Eb))
+    return CTMRGEnvTriangular(env.C .* inv.(corner_phases), env.Ea .* inv.(edge_phases.Ea), env.Eb .* inv.(edge_phases.Eb), env.shift)
 end
 
 function fix_phases(env::CTMRGEnvTriangular, signs, corner_phases, edge_phases)

@@ -740,3 +740,46 @@ end
     h = sum(S ⊗ S for S in spins)
     @test PEPSKit.energy(state, env, zero(Sz), (h, h, h)) / length(state) ≈ -3 / 8
 end
+
+@testset "CTM_triangular - Sheared three-sublattice unit cell" begin
+    Random.seed!(3)
+    P, V, χ = ComplexSpace(2), ComplexSpace(2), ComplexSpace(12)
+    ψs = InfinitePEPSTriangular(randn, ComplexF64, P, V; unitcell = (1, 3), shift = 1)
+    A, B, C = unitcell(ψs)
+    ψ9 = InfinitePEPSTriangular([A B C; C A B; B C A])
+    sublattice(r, c) = mod(c - r, 3) + 1
+
+    # the sheared (1, 3) cell reproduces the three-sublattice pattern
+    for r in -3:5, c in -3:5
+        @test PEPSKit._site(PEPSKit._cell(ψs), r, c) == (1, sublattice(r, c))
+        @test PEPSKit.virtualspace(ψs, r, c, 1) == PEPSKit.virtualspace(ψs, r - 1, c, 4)'
+    end
+    @test_throws ArgumentError InfiniteTriangularNetwork(ψs, ψ9)
+    @test_throws ArgumentError PEPSKit.rotl60(InfiniteTriangularNetwork(ψs))
+
+    H = heisenberg_XYZ(InfiniteTriangularThreeSublattice(); Jx = 1.0, Jy = 1.0, Jz = 1.0)
+    calg = SimultaneousCTMRGTriangular(; tol = 1.0e-10, maxiter = 300, verbosity = 0)
+    galg = PEPSKit.FixedPointGradient(; solver_alg = (; alg = :GMRES, krylovdim = 30), tol = 1.0e-10, maxiter = 20, verbosity = 0)
+    env_s, = leading_boundary(CTMRGEnvTriangular(randn, ComplexF64, V ⊗ V', χ; unitcell = (1, 3), shift = 1), ψs, calg)
+    env_9, = leading_boundary(CTMRGEnvTriangular(randn, ComplexF64, V ⊗ V', χ; unitcell = (3, 3)), ψ9, calg)
+    @test size(env_s) == (6, 1, 3)
+    @test_throws ArgumentError leading_boundary(env_9, ψs, calg)
+
+    function value_and_grad(ψ, env)
+        E, g = Zygote.withgradient(ψ) do x
+            env′, = PEPSKit.hook_pullback(leading_boundary, env, x, calg; alg_rrule = galg)
+            return PEPSKit.cost_function(x, env′, H)
+        end
+        return E, only(g)
+    end
+    E_s, g_s = value_and_grad(ψs, env_s)
+    E_9, g_9 = value_and_grad(ψ9, env_9)
+
+    # same energy, and the gradient of each tensor is the sum over its sublattice
+    @test E_s ≈ E_9 atol = 1.0e-8
+    @test size(g_s) == (1, 3)
+    for s in 1:3
+        g_sum = sum(g_9[r, c] for r in 1:3, c in 1:3 if sublattice(r, c) == s)
+        @test g_s[1, s] ≈ g_sum rtol = 1.0e-6
+    end
+end

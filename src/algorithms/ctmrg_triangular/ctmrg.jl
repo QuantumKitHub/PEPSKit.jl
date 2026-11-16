@@ -33,6 +33,11 @@ end
 function leading_boundary(
         env₀::CTMRGEnvTriangular, network::InfiniteTriangularNetwork, alg::CTMRGAlgorithmTriangular
     )
+    ignore_derivatives() do
+        _cell(env₀) == _cell(network) || throw(
+            ArgumentError("the unit cell of the environment, $(_cell(env₀)), does not match that of the network, $(_cell(network))")
+        )
+    end
     log = ignore_derivatives(() -> MPSKit.IterLog("CTMRG"))
     return with_verbosity(; alg.verbosity) do
         env = deepcopy(env₀)

@@ -109,7 +109,7 @@ _normalize_corner_environment(ρ) = ρ / norm(ρ)
 function calculate_twothirds_projectors(network::InfiniteTriangularNetwork{P}, env, trunc, decomposition_alg = SVDAdjoint()) where {P}
     projectors = dtmap(eachcoordinate(network, 1:6)) do (dir, r, c)
         ρL = build_double_corner_matrix_triangular(network, env, _prev(dir, 6), r, c)
-        ρR = build_double_corner_matrix_triangular(network, env, _next(dir, 6), _coordinates(dir, 2, r, c, size(network))[2:3]...)
+        ρR = build_double_corner_matrix_triangular(network, env, _next(dir, 6), _coordinates(dir, 2, r, c, _cell(network))[2:3]...)
         ρL = _normalize_corner_environment(ρL)
         ρR = _normalize_corner_environment(ρR)
         ρρ = _normalize_corner_environment(ρL * ρR)
@@ -130,8 +130,8 @@ end
 function calculate_full_projectors(network::InfiniteTriangularNetwork{P}, env, trunc, decomposition_alg = SVDAdjoint()) where {P}
     projectors = dtmap(eachcoordinate(network, 1:6)) do (dir, r, c)
         ρL = build_double_corner_matrix_triangular(network, env, mod1(dir - 1, 6), r, c)
-        ρR = build_double_corner_matrix_triangular(network, env, mod1(dir + 1, 6), _coordinates(dir, 2, r, c, size(network))[2:3]...)
-        ρ̄ = build_double_corner_matrix_triangular(network, env, mod1(dir + 3, 6), _coordinates(dir, 3, r, c, size(network))[2:3]...)
+        ρR = build_double_corner_matrix_triangular(network, env, mod1(dir + 1, 6), _coordinates(dir, 2, r, c, _cell(network))[2:3]...)
+        ρ̄ = build_double_corner_matrix_triangular(network, env, mod1(dir + 3, 6), _coordinates(dir, 3, r, c, _cell(network))[2:3]...)
         ρ̄ = _normalize_corner_environment(ρ̄)
         Ū, S̄, V̄ᴴ = svd_full(ρ̄, decomposition_alg)
         sqrtS̄ = sdiag_pow(S̄, 0.5)
@@ -160,7 +160,7 @@ function renormalize_corners!(network::InfiniteTriangularNetwork{P}, env, Pas, P
     new_corners = dtmap!!(new_corners′, coordinates) do (dir, r, c)
         return renormalize_corner_triangular((dir, r, c), network, env, Pas, Pbs)
     end
-    return CTMRGEnvTriangular(new_corners, env.Ea, env.Eb)
+    return CTMRGEnvTriangular(new_corners, env.Ea, env.Eb, env.shift)
 end
 
 function renormalize_corners!(network::InfiniteTriangularNetwork{P}, env, Pas, Pbs) where {P <: PFTensorTriangular}
@@ -169,7 +169,7 @@ function renormalize_corners!(network::InfiniteTriangularNetwork{P}, env, Pas, P
     new_corners = dtmap!!(new_corners′, coordinates) do (dir, r, c)
         return renormalize_corner_triangular((dir, r, c), network, env, Pas, Pbs)
     end
-    return CTMRGEnvTriangular(new_corners, env.Ea, env.Eb)
+    return CTMRGEnvTriangular(new_corners, env.Ea, env.Eb, env.shift)
 end
 
 function _permute_edge(t::Union{T1, T2}) where {E, S, T1 <: AbstractTensorMap{E, S, 2, 1}, T2 <: AbstractTensorMap{E, S, 1, 2}}
@@ -191,7 +191,7 @@ function semi_renormalize(network::InfiniteTriangularNetwork, env::CTMRGEnvTrian
         Ẽa = _permute_edge(sqrtS * V)
         return mat, Ẽa, Ẽb
     end
-    return getindex.(edges, 1), CTMRGEnvTriangular(env.C, getindex.(edges, 2), getindex.(edges, 3))
+    return getindex.(edges, 1), CTMRGEnvTriangular(env.C, getindex.(edges, 2), getindex.(edges, 3), env.shift)
 end
 
 function _truncate_edge(mat, ρL, ρR, trunc, decomposition_alg = SVDAdjoint(); conditioning = true)
@@ -224,7 +224,7 @@ function renormalize_edges(network::InfiniteTriangularNetwork, env::CTMRGEnvTria
         trunc′ = _truncation_strategy(trunc, env.Ea[dir, r, c])
         return _truncate_edge(mats[dir, r, c], ρL, ρR, trunc′, decomposition_alg; conditioning)
     end
-    env′ = normalize_edges(CTMRGEnvTriangular(env.C, getindex.(edges, 1), getindex.(edges, 2)))
+    env′ = normalize_edges(CTMRGEnvTriangular(env.C, getindex.(edges, 1), getindex.(edges, 2), env.shift))
     return env′, maximum(x -> x[3], edges)
 end
 
@@ -232,7 +232,7 @@ function normalize_corners(env::CTMRGEnvTriangular)
     C_normalized = map(env.C) do C
         return C / norm(C)
     end
-    return CTMRGEnvTriangular(C_normalized, env.Ea, env.Eb)
+    return CTMRGEnvTriangular(C_normalized, env.Ea, env.Eb, env.shift)
 end
 
 function normalize_edges(env::CTMRGEnvTriangular)
@@ -242,7 +242,7 @@ function normalize_edges(env::CTMRGEnvTriangular)
     Eb_normalized = map(env.Eb) do e
         return e / norm(e)
     end
-    return CTMRGEnvTriangular(env.C, Ea_normalized, Eb_normalized)
+    return CTMRGEnvTriangular(env.C, Ea_normalized, Eb_normalized, env.shift)
 end
 
 function calculate_error(Ss, Ss_prev)

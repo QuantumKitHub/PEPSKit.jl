@@ -41,7 +41,7 @@ function local_expectation_value(
         throw(ArgumentError("only one-site and two-site triangular terms are supported"))
     end
     network = InfiniteTriangularNetwork(ket, bra)
-    site = mod1.(Tuple(site), size(network))
+    site = _cellsite(network, Tuple(site)...)
     return contract(site, network, env, operator) / contract(site, network, env)
 end
 

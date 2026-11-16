@@ -1,23 +1,24 @@
-function _coordinates(dir::Int, rot::Int, r::Int, c::Int, unitcell::Tuple{Int, Int})
-    rows, cols = unitcell
-    if mod1(dir + rot, 6) == 1
-        return (mod1(dir, 6), mod1(r - 1, rows), mod1(c, cols))
-    elseif mod1(dir + rot, 6) == 2
-        return (mod1(dir, 6), mod1(r - 1, rows), mod1(c + 1, cols))
-    elseif mod1(dir + rot, 6) == 3
-        return (mod1(dir, 6), mod1(r, rows), mod1(c + 1, cols))
-    elseif mod1(dir + rot, 6) == 4
-        return (mod1(dir, 6), mod1(r + 1, rows), mod1(c, cols))
-    elseif mod1(dir + rot, 6) == 5
-        return (mod1(dir, 6), mod1(r + 1, rows), mod1(c - 1, cols))
-    elseif mod1(dir + rot, 6) == 6
-        return (mod1(dir, 6), mod1(r, rows), mod1(c - 1, cols))
-    end
-end
+# lattice offsets `(δr, δc)` of the six neighbors in the directions NW, NE, E, SE, SW, W
+const _TRIANGULAR_OFFSETS = ((-1, 0), (-1, 1), (0, 1), (1, 0), (1, -1), (0, -1))
 
-function _coordinates(dir::Int, r::Int, c::Int, unitcell::Tuple{Int, Int})
-    return _coordinates(dir, 0, r, c, unitcell)[2:3]
+"""
+    _coordinates(dir, rot, r, c, cell) -> (dir′, r′, c′)
+
+Return `mod1(dir, 6)` together with the unit-cell representative of the neighbor of site
+`[r, c]` in direction `dir + rot`, for a [`TriangularUnitCell`](@ref) `cell` (or a
+rectangular unit-cell size).
+"""
+function _coordinates(dir::Int, rot::Int, r::Int, c::Int, cell::TriangularUnitCell)
+    δr, δc = _TRIANGULAR_OFFSETS[mod1(dir + rot, 6)]
+    return (mod1(dir, 6), _site(cell, r + δr, c + δc)...)
 end
+function _coordinates(dir::Int, rot::Int, r::Int, c::Int, unitcell::Tuple{Int, Int})
+    return _coordinates(dir, rot, r, c, TriangularUnitCell(unitcell))
+end
+function _coordinates(dir::Int, r::Int, c::Int, cell)
+    return _coordinates(dir, 0, r, c, cell)[2:3]
+end
+@non_differentiable _coordinates(args...)
 
 function _truncway(trunctype::Symbol, D::E) where {E <: ElementarySpace}
     if trunctype == :truncdim

@@ -380,8 +380,11 @@ have unit Euclidean norm.
 """
 function peps_normalize(A::Union{InfinitePEPS, InfinitePEPSTriangular})
     normalized_tensors = normalize.(unitcell(A))
-    return typeof(A)(normalized_tensors)
+    return _rewrap(A, normalized_tensors)
 end
+
+# wrap new unit-cell tensors with the same type and geometry as `A`
+_rewrap(A::InfinitePEPS, tensors::AbstractMatrix) = typeof(A)(tensors)
 
 """Real part of the Hermitian inner product."""
 real_inner(η₁, η₂) = real(inner(η₁, η₂))
@@ -397,7 +400,7 @@ function peps_project_tangent(η::Union{InfinitePEPS, InfinitePEPSTriangular}, p
     tangents = map(unitcell(η), unitcell(peps)) do direction, A
         return project_tangent(direction, A; inner = real_inner)
     end
-    return typeof(peps)(tangents)
+    return _rewrap(peps, tangents)
 end
 
 """
@@ -421,8 +424,8 @@ function peps_retract(x, η, α)
     env = deepcopy(x[2])
 
     retractions = norm_preserving_retract.(unitcell(peps), unitcell(η), α; inner = real_inner)
-    peps′ = typeof(peps)(map(first, retractions))
-    ξ = typeof(peps)(map(last, retractions))
+    peps′ = _rewrap(peps, map(first, retractions))
+    ξ = _rewrap(peps, map(last, retractions))
 
     return (peps′, env), ξ
 end
