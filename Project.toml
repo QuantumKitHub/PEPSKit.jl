@@ -37,6 +37,9 @@ GPUArrays = "0c68f7d7-f131-5f86-a1c3-88cf8149b2d7"
 PEPSKitAdaptExt = "Adapt"
 PEPSKitGPUArraysExt = "GPUArrays"
 
+[sources]
+TensorOperations = {url = "https://github.com/QuantumKitHub/TensorOperations.jl", rev = "main"}
+
 [compat]
 Accessors = "0.1"
 Adapt = "4"
