@@ -69,7 +69,7 @@ end
 
 function fix_phases(env::AbstractCTMRGEnv, signs, corner_phases, edge_phases, allocator)
     env_fixed_relative = fix_relative_phases(env, signs, allocator)
-    env_fixed_global = fix_global_phases(env_fixed_relative, corner_phases, edge_phases, allocator)
+    env_fixed_global = fix_global_phases(env_fixed_relative, corner_phases, edge_phases)
     return env_fixed_global
 end
 
@@ -100,8 +100,8 @@ function compute_relative_phases(
 
         # Find right fixed points of mixed transfer matrices
         eigsolve_alg = Arnoldi()
-        ρprev = right_transfermatrix_fixedpoint(Tsprev, M, eigsolve_alg)
-        ρfinal = right_transfermatrix_fixedpoint(Tsfinal, M, eigsolve_alg)
+        ρprev = right_transfermatrix_fixedpoint(Tsprev, M, eigsolve_alg, allocator)
+        ρfinal = right_transfermatrix_fixedpoint(Tsfinal, M, eigsolve_alg, allocator)
 
         # Decompose and multiply
         Qprev, = left_orth!(ρprev; positive = true)
@@ -124,8 +124,8 @@ function compute_relative_phases(envfinal::C4vCTMRGEnv{C, T}, envprev::C4vCTMRGE
 
     # Find right fixed points of mixed transfer matrices
     eigsolve_alg = Lanczos() # real eigenvalues
-    ρprev = right_transfermatrix_fixedpoint([Tprev], [M], eigsolve_alg)
-    ρfinal = right_transfermatrix_fixedpoint([Tfinal], [M], eigsolve_alg)
+    ρprev = right_transfermatrix_fixedpoint([Tprev], [M], eigsolve_alg, allocator)
+    ρfinal = right_transfermatrix_fixedpoint([Tfinal], [M], eigsolve_alg, allocator)
 
     # Decompose and multiply
     Qprev, = left_orth!(ρprev; positive = true)
@@ -269,16 +269,16 @@ Fix global multiplicative phase of the environment tensors. To that end, the dot
 between all corners and all edges are computed to obtain the global phase which is then
 divided out.
 """
-function fix_global_phases(envfix::AbstractCTMRGEnv, envprev::AbstractCTMRGEnv, allocator)
+function fix_global_phases(envfix::AbstractCTMRGEnv, envprev::AbstractCTMRGEnv)
     corner_phases, edge_phases = compute_global_phases(envfix, envprev)
-    return fix_global_phases(envfix, corner_phases, edge_phases, allocator)
+    return fix_global_phases(envfix, corner_phases, edge_phases)
 end
-function fix_global_phases(env::CTMRGEnv, corner_phases, edge_phases, allocator)
+function fix_global_phases(env::CTMRGEnv, corner_phases, edge_phases)
     cornersgfix = env.corners .* inv.(corner_phases)
     edgesgfix = env.edges .* inv.(edge_phases)
     return CTMRGEnv(cornersgfix, edgesgfix)
 end
-function fix_global_phases(env::C4vCTMRGEnv, corner_phases, edge_phases, allocator)
+function fix_global_phases(env::C4vCTMRGEnv, corner_phases, edge_phases)
     cornersgfix = env.corners .* inv.(corner_phases)
     edgesgfix = env.edges .* inv.(edge_phases)
     return C4vCTMRGEnv(cornersgfix, edgesgfix)

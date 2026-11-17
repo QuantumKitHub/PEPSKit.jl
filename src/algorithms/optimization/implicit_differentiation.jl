@@ -221,7 +221,7 @@ function _rrule(
     )
     _check_algorithm_combination(alg, gradmode)
 
-    env, = leading_boundary(envinit, state, alg)
+    env, = leading_boundary(envinit, state, alg; allocator)
 
     # prepare iterating function corresponding to a single gauge-fixed CTMRG iteration
     alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
@@ -233,7 +233,7 @@ function _rrule(
         # fix global phases relative to the fixed point inside the iteration
         return fix_global_phases(
             fix_relative_phases(ctmrg_iteration(InfiniteSquareNetwork(p), x, alg_fixed, allocator)[1], signs, allocator),
-            env, allocator
+            env
         )
     end
     # prepare its pullback
@@ -474,7 +474,7 @@ function _rrule(
     )
     _check_algorithm_combination(alg, gradmode)
 
-    env, = leading_boundary(envinit, state, alg)
+    env, = leading_boundary(envinit, state, alg; allocator)
 
     # prepare iterating function corresponding to a single gauge-fixed CTMRG iteration
     alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
@@ -622,7 +622,7 @@ function PEPSKit._rrule(
         alg::SimultaneousCTMRG{<:HalfInfiniteProjector};
         allocator = scheduler_allocator(state)
     )
-    env, = leading_boundary(envinit, state, alg)
+    env, = leading_boundary(envinit, state, alg; allocator)
 
     # gauge-fix SVD isometries
     alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
