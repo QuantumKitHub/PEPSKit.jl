@@ -9,7 +9,7 @@ end
 
 function gradients_subspace_iteration(AT)
     return @testset "SI decomposition gradients ($AT)" begin
-        @testset "SVD pullback, $sector, $reverse" for sector in (Trivial, SU2Irrep, FermionParity ⊠ U1Irrep), reverse in (:Arnoldi, :TruncPullback)
+        @testset "SVD pullback, $sector, $reverse" for sector in (Trivial, SU2Irrep, FermionParity ⊠ U1Irrep), reverse in (:GMRES, :Arnoldi, :TruncPullback)
             Random.seed!(84264)
             V = sector == Trivial ? ℂ^2 : sector == SU2Irrep ? SU2Space(0 => 1, 1 // 2 => 1) : Vect[sector]((0, 0) => 1, (1, 1) => 1)
             W = V ⊗ V'
@@ -33,8 +33,9 @@ function gradients_subspace_iteration(AT)
             end
             f(t) = loss(t, svd, true)
             ref(t) = loss(t, dense, false)
-            gradient = only(Zygote.gradient(f, A))
+            value, (gradient,) = Zygote.withgradient(f, A)
             reference = only(Zygote.gradient(ref, A))
+            @test value ≈ f(A) atol = 1.0e-10
             @test f(A) ≈ ref(A) atol = 1.0e-10
             @test norm(gradient - reference) / norm(reference) < 1.0e-7
             @test real(dot(gradient, direction)) ≈ si_directional_difference(f, A, direction) rtol = 1.0e-6 atol = 1.0e-8

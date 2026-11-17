@@ -48,17 +48,20 @@ end
 
 _environment_product(a, b, ::Union{SubspaceSVD, TruncatedSubspaceSVD}) = _factorized_environment(a, b)
 function _projector_svd(M::FactorizedMap, alg::TruncatedSubspaceSVD)
-    # A cheap common scale avoids forming the full environment just to normalize it.
-    scaled = FactorizedMap(map(normalize, M.factors))
-    U, S, V, error = svd_trunc!(scaled, alg)
+    U, S, V, error = svd_trunc!(M, alg)
+    # CTMRG removes this common scale; normalize only the small retained spectrum.
+    scale = norm(S)
     Q = ignore_derivatives() do
         cache = alg.fwd_alg.alg.cache
         state = cache[]
         cache[] = (; state.X, state.iteration, state.subspace_error)
         return state.Q
     end
-    U, V = _subspace_svd_phase_correction(U, V, Q' * U)
-    return U, S, V, error
+    # The reduced SVD already fixes phases; only its pullback needs this correction.
+    if Zygote.isderiving()
+        U, V = _subspace_svd_phase_correction(U, V, Q' * U)
+    end
+    return U, S / scale, V, error / scale
 end
 
 # These hooks select algorithm metadata and warm starts, not differentiable tensor data.

@@ -4,7 +4,7 @@ using MatrixAlgebraKit: TruncatedAlgorithm
 function utility_subspace_iteration(AT)
     return @testset "SubspaceIteration decomposition ($AT)" begin
         @test SubspaceIteration(; subspace = 6).n_subspace_iter == 1
-        @test SVDAdjoint(; fwd_alg = (; alg = :SubspaceIteration, subspace = 6)).rrule_alg isa PEPSKit.Arnoldi
+        @test SVDAdjoint(; fwd_alg = (; alg = :SubspaceIteration, subspace = 6)).rrule_alg isa PEPSKit.GMRES
         for subspace in (0, -1, true, truncrank(4))
             @test_throws ArgumentError SubspaceIteration(; subspace)
         end

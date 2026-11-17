@@ -8,7 +8,7 @@ Integer budgets discover charges initially and every `charge_refresh` decomposit
 `charge_probe` optionally limits added multiplicities per sector on later refreshes.
 `n_subspace_iter` counts extra stabilized power steps (default: one).
 CTMRG keeps a separate warm start for each cut and creates fresh caches for each contraction.
-The default SVD reverse rule is Arnoldi, independent of the trial bases.
+The default SVD reverse rule is GMRES, independent of the trial bases.
 """
 struct SubspaceIteration{E, Q, R, C}
     subspace::E
@@ -36,7 +36,7 @@ function SubspaceIteration(;
 end
 
 SVD_FWD_SYMBOLS[:SubspaceIteration] = SubspaceIteration
-_default_svd_rrule_alg(::SubspaceIteration) = :Arnoldi
+_default_svd_rrule_alg(::SubspaceIteration) = :GMRES
 
 # Ordinary matrix products represent tensor contractions once the internal dual legs are twisted.
 struct FactorizedMap{F}
@@ -218,23 +218,60 @@ function _subspace_svd_phase_correction(U::AbstractTensorMap, V::AbstractTensorM
 end
 
 
-# A factorized SVD uses the same KrylovKit adjoint as IterSVD, applied to thin blocks.
+# Solve the complementary SVD response for all retained directions together.
+# MatrixAlgebraKit handles the retained-space contribution and its gauge conventions.
+function _subspace_svd_pullback_data(f, u, s, v, du, ds, dv, alg::GMRES)
+    gtol = _get_pullback_gauge_tol(alg.verbosity)
+    h, a, bx, by = MatrixAlgebraKit.check_and_prepare_svd_cotangents(
+        u, s, v, du, Diagonal(ds), dv, length(s);
+        degeneracy_atol = alg.tol, gauge_atol = gtol((du, ds, dv)),
+    )
+    si = Diagonal(inv.(s))
+    x0 = isnothing(bx) ? zero(u) : bx * si
+    y0 = isnothing(by) ? zero(v') : by' * si
+    project(q, z) = z - q * (q' * z)
+    normal(y) = project(u, f(y, Val(false)))
+    adjoint(x) = project(v', f(x, Val(true)))
+    # Eliminate Y from X S - A⊥ Y = ΔU⊥ and Y S - A⊥' X = ΔV⊥.
+    rhs = x0 + normal(y0) * si
+    alg = @set alg.tol = alg.tol * max(norm(rhs), eps(real(eltype(s))))
+    x, info = linsolve(rhs, zero(rhs), alg) do x
+        x - normal(adjoint(x) * si) * si
+    end
+    info.converged == 0 && alg.verbosity > 0 &&
+        @warn "SVD cotangent linear problem did not converge" info.normres
+    y = y0 + adjoint(x) * si
+    g = (h + a) / 2
+    return x + u * g, y + v' * g'
+end
+
+# A factorized SVD uses thin pullbacks, without forming the full environment.
 function ChainRulesCore.rrule(
         config::RuleConfig{>:HasReverseMode}, ::typeof(svd_trunc!),
         M::FactorizedMap, alg::SVDAdjoint{F, R},
     ) where {F, R <: Union{Arnoldi, GMRES, BiCGStab}}
     U, S, V, error = svd_trunc(M, alg)
+    scale = norm(S)
     reverse_alg = alg.rrule_alg
-    smallest = minimum(((_, b),) -> minimum(diag(b)), blocks(S))
+    smallest = minimum(((_, b),) -> minimum(diag(b)), blocks(S)) / scale
     reverse_alg = @set reverse_alg.tol = clamp(reverse_alg.tol, eps(scalartype(S))^(3 / 4), 1.0e-2 * smallest)
+    getdiag = reverse_alg isa GMRES ? diagview : _indexable_diagview
     function pullback(Δ)
         ΔU, ΔS, ΔV, = unthunk.(Δ)
         X, Y = zero(U), zero(V')
         for (c, s) in blocks(S)
             u, v = block(U, c), block(V, c)
             du, ds, dv = block(ΔU, c), block(ΔS, c), block(ΔV, c)
-            values = _indexable_diagview(s)
-            dvalues = ds isa AbstractZero ? zero(values) : _indexable_diagview(ds)
+            values = getdiag(s) / scale
+            dvalues = ds isa AbstractZero ? zero(values) : getdiag(ds) * scale
+            m = block(M, c)
+            f = (x, adj) -> m(x, adj) / scale
+            if reverse_alg isa GMRES
+                x, y = _subspace_svd_pullback_data(f, u, values, v, du, dvalues, dv, reverse_alg)
+                copyto!(block(X, c), x / scale)
+                copyto!(block(Y, c), y / scale)
+                continue
+            end
             left = _column_vectors(storagetype(U), u)
             right = _column_vectors(storagetype(V), v')
             dleft = du isa AbstractZero ? fill(ZeroTangent(), length(values)) : _column_vectors(storagetype(U), du)
@@ -243,10 +280,10 @@ function ChainRulesCore.rrule(
             primal = GKL(; tol = reverse_alg.tol, verbosity = reverse_alg.verbosity)
             xs, ys = KrylovKitCRCExt.compute_svdsolve_pullback_data(
                 dvalues, dleft, dright, values, left, right, info,
-                block(M, c), :LR, primal, reverse_alg,
+                f, :LR, primal, reverse_alg,
             )
-            copyto!(block(X, c), stack(xs))
-            copyto!(block(Y, c), stack(ys))
+            copyto!(block(X, c), stack(xs) / scale)
+            copyto!(block(Y, c), stack(ys) / scale)
         end
         dnormal, _ = _factorized_pullback(M.factors, V', X)
         dadjoint, _ = _factorized_pullback(adjoint(M).factors, U, Y)
@@ -286,10 +323,10 @@ end
 
 # Pull back thin applications without materializing the product or differentiating tuple folds.
 function _factorized_pullback(factors, X, ΔY)
+    rights = reverse((X, accumulate((x, a) -> a * x, reverse(Base.tail(factors)); init = X)...))
     gradients = ()
     for j in eachindex(factors)
-        right = foldr(*, factors[(j + 1):end]; init = X)
-        gradients = (gradients..., ProjectTo(factors[j])(ΔY * right'))
+        gradients = (gradients..., ProjectTo(factors[j])(ΔY * rights[j]'))
         ΔY = factors[j]' * ΔY
     end
     return gradients, ProjectTo(X)(ΔY)
