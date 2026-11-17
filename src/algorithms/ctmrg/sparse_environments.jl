@@ -62,7 +62,7 @@ function EnlargedCorner(network::InfiniteSquareNetwork, env, coordinates)
 end
 
 """
-    TensorMap(Q::EnlargedCorner)
+    TensorMap(Q::EnlargedCorner, allocator)
 
 Instantiate enlarged corner as a `TensorMap`.
 """

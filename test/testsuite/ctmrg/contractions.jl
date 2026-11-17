@@ -65,7 +65,7 @@ end
 function test_contractions(n::InfiniteSquareNetwork, env::CTMRGEnv)
     dirs_and_coordinates = eachcoordinate(n, 1:4)
 
-    allocator = default_allocator(n, SerialScheduler())
+    allocator = scheduler_allocator(n)
     # initialize dense and sparse enlarged corners
     sparse_enlarged_corners = map(dirs_and_coordinates) do co
         return EnlargedCorner(n, env, co)
@@ -116,7 +116,7 @@ function test_contractions(n::InfiniteSquareNetwork, env::CTMRGEnv)
         )
     end
 
-    allocator = default_allocator(env, SerialScheduler())
+    allocator = scheduler_allocator(n)
     # SVD half and full infinite environments
     (P_left_half, P_right_half), info_half = simultaneous_projectors(
         dense_enlarged_corners, env, HalfInfiniteProjector(), allocator

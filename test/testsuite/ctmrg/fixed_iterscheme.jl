@@ -42,7 +42,7 @@ function ctmrg_fixed_iterscheme_asymmetric(AT; svd_alg = :DivideAndConquer)
 
         env_conv1, = leading_boundary(CTMRGEnv(psi, ComplexSpace(χ)), psi, ctm_alg)
 
-        allocator = default_allocator(n, SerialScheduler())
+        allocator = scheduler_allocator(n)
         # do extra iteration and gauge fix
         env_conv2, = @testinferred ctmrg_iteration(n, env_conv1, ctm_alg, allocator)
         env_fixed = gauge_fix(env_conv2, env_conv1, ScramblingEnvGauge(), allocator)
@@ -87,7 +87,7 @@ function ctmrg_fixed_iterscheme_c4v(AT; eigh_alg = :QRIteration)
         env_conv1, info = leading_boundary(env₀, psi, ctm_alg)
 
         # do extra iteration to check gauge fixing
-        allocator = default_allocator(n, SerialScheduler())
+        allocator = scheduler_allocator(n)
         env_conv2, info = @testinferred ctmrg_iteration(n, env_conv1, ctm_alg, allocator) # CHECK
 
         env_fixed = gauge_fix(env_conv2, env_conv1, ScramblingEnvGauge(), allocator)
@@ -124,7 +124,7 @@ function ctmrg_fixed_iterscheme_divide_and_conquer(AT)
         env₀ = CTMRGEnv(psi, ComplexSpace(χ))
         env_conv1, = leading_boundary(env₀, psi, ctm_alg_iter)
 
-        allocator = default_allocator(n, SerialScheduler())
+        allocator = scheduler_allocator(n)
         # do extra iteration to get gauge fixing
         env_conv2_iter, info_iter = @testinferred ctmrg_iteration(n, env_conv1, ctm_alg_iter, allocator)
         env_fix_iter = gauge_fix(env_conv2_iter, env_conv1, ScramblingEnvGauge(), allocator)

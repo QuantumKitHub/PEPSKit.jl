@@ -101,9 +101,9 @@ supplied via the keyword arguments or directly as an [`CTMRGAlgorithm`](@ref) st
     - `info.convergence_error::Real` : The final convergence error at the end of the contraction procedure.
     - `info.contraction_metrics::NamedTuple` : A `NamedTuple` containing metrics which characterize the contraction. The precise contents depend on `alg`.
 """
-function leading_boundary(env₀::AbstractCTMRGEnv, network::InfiniteSquareNetwork; kwargs...)
+function leading_boundary(env₀::AbstractCTMRGEnv, network::InfiniteSquareNetwork; allocator = scheduler_allocator(network), kwargs...)
     alg = select_algorithm(leading_boundary, env₀; kwargs...)
-    return leading_boundary(env₀, network, alg)
+    return leading_boundary(env₀, network, alg; allocator)
 end
 function leading_boundary(
         env₀::AbstractCTMRGEnv, network::InfiniteSquareNetwork, alg::CTMRGAlgorithm;
