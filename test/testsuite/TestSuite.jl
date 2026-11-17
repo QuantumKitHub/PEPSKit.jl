@@ -164,23 +164,11 @@ module CTMRGUnitCell
 end
 using .CTMRGUnitCell
 
-module CTMRGSubspaceDimensions
-    include("ctmrg/subspace_dimensions.jl")
-    export ctmrg_subspace_dimensions
-end
-using .CTMRGSubspaceDimensions
-
 module CTMRGSubspaceIteration
     include("ctmrg/subspace_iteration.jl")
     export ctmrg_subspace_iteration
 end
 using .CTMRGSubspaceIteration
-
-module CTMRGSubspaceUpdates
-    include("ctmrg/subspace_updates.jl")
-    export ctmrg_subspace_updates
-end
-using .CTMRGSubspaceUpdates
 
 # Examples
 # --------
@@ -228,23 +216,11 @@ module GradientsCTMRG
 end
 using .GradientsCTMRG
 
-module GradientsSubspaceDimensions
-    include("gradients/subspace_dimensions.jl")
-    export gradients_subspace_dimensions
-end
-using .GradientsSubspaceDimensions
-
 module GradientsSubspaceIteration
     include("gradients/subspace_iteration.jl")
     export gradients_subspace_iteration
 end
 using .GradientsSubspaceIteration
-
-module GradientsSubspaceUpdates
-    include("gradients/subspace_updates.jl")
-    export gradients_subspace_updates
-end
-using .GradientsSubspaceUpdates
 
 # Optimization
 # ------------
@@ -335,6 +311,12 @@ module UtilityOrthWrapper
     export utility_orth_wrapper
 end
 using .UtilityOrthWrapper
+
+module UtilitySubspaceIteration
+    include("utility/subspace_iteration.jl")
+    export utility_subspace_iteration
+end
+using .UtilitySubspaceIteration
 
 module UtilitySVDWrapper
     include("utility/svd_wrapper.jl")

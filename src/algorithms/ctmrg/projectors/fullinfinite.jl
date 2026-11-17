@@ -37,13 +37,13 @@ end
 PROJECTOR_SYMBOLS[:FullInfiniteProjector] = FullInfiniteProjector
 
 function compute_projector(enlarged_corners, alg::FullInfiniteProjector)
-    halfinf_left = half_infinite_environment(enlarged_corners[1], enlarged_corners[2])
-    halfinf_right = half_infinite_environment(enlarged_corners[3], enlarged_corners[4])
+    svd_alg = decomposition_algorithm(alg)
+    halfinf_left = _environment_product(enlarged_corners[1], enlarged_corners[2], svd_alg)
+    halfinf_right = _environment_product(enlarged_corners[3], enlarged_corners[4], svd_alg)
 
     # SVD full-infinite environment
-    fullinf = full_infinite_environment(halfinf_left, halfinf_right)
-    svd_alg = decomposition_algorithm(alg)
-    U, S, V, truncation_error = svd_trunc!(normalize(fullinf), svd_alg)
+    fullinf = _environment_product(halfinf_left, halfinf_right, svd_alg)
+    U, S, V, truncation_error = _projector_svd(fullinf, svd_alg)
 
     # get some decomposition info
     truncation_error = truncation_error / norm(S) # normalize truncation error

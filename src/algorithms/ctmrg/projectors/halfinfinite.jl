@@ -44,9 +44,9 @@ using the specified `alg`.
 """
 function compute_projector(enlarged_corners, alg::HalfInfiniteProjector)
     # SVD half-infinite environment
-    halfinf = half_infinite_environment(enlarged_corners...)
     svd_alg = decomposition_algorithm(alg)
-    U, S, V, truncation_error = svd_trunc!(normalize(halfinf), svd_alg)
+    halfinf = _environment_product(enlarged_corners..., svd_alg)
+    U, S, V, truncation_error = _projector_svd(halfinf, svd_alg)
 
     # get some decomposition info
     truncation_error = truncation_error / norm(S) # normalize truncation error

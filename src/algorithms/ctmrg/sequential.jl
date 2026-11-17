@@ -22,7 +22,7 @@ For a full description, see [`leading_boundary`](@ref). The supported keywords a
 * `verbosity::Int=$(Defaults.ctmrg_verbosity)`
 * `trunc::Union{TruncationStrategy,NamedTuple}=(; alg::Symbol=:$(Defaults.trunc))`
 * `decomposition_alg::Union{<:SVDAdjoint,NamedTuple}`
-* `projector_alg::Union{Symbol,NamedTuple}=:$(Defaults.projector_alg)`
+* `projector_alg::Symbol=:$(Defaults.projector_alg)`
 """
 struct SequentialCTMRG{P <: ProjectorAlgorithm} <: CTMRGAlgorithm
     tol::Float64
@@ -37,25 +37,12 @@ end
 
 CTMRG_SYMBOLS[:SequentialCTMRG] = SequentialCTMRG
 
-function initialize_projector_cache(
-        network, env, alg::Union{SimultaneousCTMRG{<:SubspaceIterationProjector}, SequentialCTMRG{<:SubspaceIterationProjector}}
-    )
-    return initialize_subspace_iteration_cache(network, env, alg.projector_alg)
-end
-
-function check_input(
-        ::typeof(leading_boundary), network, env,
-        alg::Union{SimultaneousCTMRG{<:SubspaceIterationProjector}, SequentialCTMRG{<:SubspaceIterationProjector}},
-    )
-    return _check_subspace_iteration_input(network, env, alg.projector_alg)
-end
-
 """
     ctmrg_leftmove(col::Int, network, env::CTMRGEnv, alg::SequentialCTMRG)
 
 Perform sequential CTMRG left move on the `col`-th column.
 """
-function ctmrg_leftmove(col::Int, network, env::CTMRGEnv, alg::SequentialCTMRG, args...)
+function ctmrg_leftmove(col::Int, network, env::CTMRGEnv, alg::SequentialCTMRG)
     #=
         ----> left move
         C1 ← T1 ←   r-1
@@ -65,15 +52,13 @@ function ctmrg_leftmove(col::Int, network, env::CTMRGEnv, alg::SequentialCTMRG, 
         C4 → T3 →   r+1
         c-1  c 
     =#
-    projectors, info = sequential_projectors(col, network, env, alg.projector_alg, args...)
+    projectors, info = sequential_projectors(col, network, env, alg.projector_alg)
     env = renormalize_sequentially(col, projectors, network, env)
     return env, info
 end
 
-function ctmrg_iteration(
-        network, env::CTMRGEnv, alg::SequentialCTMRG,
-        cache::EmptyProjectorCache,
-    )
+function ctmrg_iteration(network, env::CTMRGEnv, alg::SequentialCTMRG)
+    alg = _prepare_ctmrg(alg, env)
     truncation_error = zero(real(scalartype(network)))
     for _ in 1:4 # rotate
         for col in 1:size(network, 2) # left move column-wise
@@ -84,56 +69,9 @@ function ctmrg_iteration(
         end
         network = rotate_north(network, EAST)
         env = rotate_north(env, EAST)
+        alg = _rotate_decomposition(alg)
     end
-    return env, (; contraction_metrics = (; truncation_error)), cache
-end
-
-"""Replace the updated direction using projector columns without mutating the old cache."""
-function _replace_subspace_phase(grid, columns)
-    return map(CartesianIndices(grid)) do I
-        return I[1] == WEST ? columns[I[3]].X[I[2]] : grid[I]
-    end
-end
-
-function ctmrg_iteration(
-        network, env::CTMRGEnv,
-        alg::SequentialCTMRG{<:SubspaceIterationProjector},
-        cache::SubspaceIterationCache,
-    )
-    truncation_error = zero(real(scalartype(network)))
-
-    if !_compatible_subspace_cache(cache, env)
-        cache = initialize_projector_cache(network, env, alg)
-    end
-    X = cache.X
-
-    # Perform four directional moves, expressing each one as a column left-move.
-    for _ in 1:4
-        # Select the rangefinders aligned with the current left-move direction.
-        Xdirection = X[WEST, :, :]
-
-        columns = ()
-        for col in 1:size(network, 2)
-            env, info = ctmrg_leftmove(
-                col, network, env, alg, Xdirection,
-                _subspace_charge_refresh(cache, alg.projector_alg)
-            )
-            columns = (columns..., info)
-            ignore_derivatives() do
-                truncation_error = max(truncation_error, info.truncation_error)
-            end
-        end
-
-        X = _rotate_subspace_grid(_replace_subspace_phase(X, columns))
-
-        # Rotate the network, environment, and cache into the frame of the next left move.
-        network = rotate_north(network, EAST)
-        env = rotate_north(env, EAST)
-    end
-
-    cache′, subspace_error = _update_subspace_cache(cache, X)
-    info = (; contraction_metrics = (; truncation_error, subspace_error))
-    return env, info, cache′
+    return env, (; contraction_metrics = (; truncation_error))
 end
 
 """
@@ -143,32 +81,45 @@ end
 Compute CTMRG projectors in the `:SequentialCTMRG` scheme either for an entire column `col` or
 for a specific `coordinate` (where `dir=WEST` is already implied in the `:SequentialCTMRG` scheme).
 """
-function sequential_projectors(col::Int, network, env::CTMRGEnv, alg::ProjectorAlgorithm, args...)
+function sequential_projectors(col::Int, network, env::CTMRGEnv, alg::ProjectorAlgorithm)
     coordinates = eachcoordinate(env)[:, col]
     T_dst = Base.promote_op(
-        sequential_projectors, NTuple{3, Int}, typeof(network), typeof(env), typeof(alg),
-        map(typeof, _projector_arguments(first(coordinates), args...))...,
+        sequential_projectors, NTuple{3, Int}, typeof(network), typeof(env), typeof(alg)
     )
     proj_and_info = similar(coordinates, T_dst)
     proj_and_info′::typeof(proj_and_info) = dtmap!!(proj_and_info, coordinates) do (r, c)
-        return sequential_projectors((WEST, r, c), network, env, alg, _projector_arguments((r, c), args...)...)
+        proj, info = sequential_projectors((WEST, r, c), network, env, alg)
+        return proj, info
     end
     return _split_proj_and_info(proj_and_info′)
 end
 function sequential_projectors(
-        coordinate::NTuple{3, Int}, network, env::CTMRGEnv, alg::Union{HalfInfiniteProjector, FullInfiniteProjector}
+        coordinate::NTuple{3, Int}, network, env::CTMRGEnv, alg::HalfInfiniteProjector
     )
-    ec, trunc = enlarged_corner_inputs(network, coordinate, env, alg, Val(alg isa HalfInfiniteProjector ? 2 : 4))
-    alg´ = _set_decomposition_truncation(alg, trunc)
-    return compute_projector(ec, alg´)
+    _, r, c = coordinate
+    r′ = r - 1
+    trunc = truncation_strategy(alg, edge(env, WEST, r′, c))
+    alg´ = _set_decomposition_truncation(alg, trunc, coordinate)
+    Q1 = TensorMap(EnlargedCorner(network, env, (SOUTHWEST, r, c)))
+    Q2 = TensorMap(EnlargedCorner(network, env, (NORTHWEST, r′, c)))
+    return compute_projector((Q1, Q2), alg´)
 end
-
 function sequential_projectors(
-        coordinate::NTuple{3, Int}, network, env::CTMRGEnv,
-        alg::SubspaceIterationProjector, X, refresh::Bool = false,
+        coordinate::NTuple{3, Int}, network, env::CTMRGEnv, alg::FullInfiniteProjector
     )
-    ec, trunc = enlarged_corner_inputs(network, coordinate, env, alg, Val(4))
-    return compute_projector(ec, alg, (; X, trunc, refresh))
+    rowsize, colsize = size(env)[2:3]
+    coordinate_nw = _next_coordinate(coordinate, rowsize, colsize)
+    coordinate_ne = _next_coordinate(coordinate_nw, rowsize, colsize)
+    coordinate_se = _next_coordinate(coordinate_ne, rowsize, colsize)
+    trunc = truncation_strategy(alg, env.edges[WEST, coordinate_nw[2:3]...])
+    alg´ = _set_decomposition_truncation(alg, trunc, coordinate)
+    ec = (
+        TensorMap(EnlargedCorner(network, env, coordinate_se)),
+        TensorMap(EnlargedCorner(network, env, coordinate)),
+        TensorMap(EnlargedCorner(network, env, coordinate_nw)),
+        TensorMap(EnlargedCorner(network, env, coordinate_ne)),
+    )
+    return compute_projector(ec, alg´)
 end
 
 """

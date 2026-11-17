@@ -205,44 +205,9 @@ Evaluating the gradient of the cost function for CTMRG:
 _scrambling_env_gauge(::CTMRGAlgorithm) = ScramblingEnvGauge()
 
 function _set_fixed_truncation(alg::CTMRGAlgorithm)
-    projector = _set_truncation(alg.projector_alg, FixedSpaceTruncation())
-    if projector isa SubspaceIterationProjector && _adaptive_subspace(alg.projector_alg)
-        # Hold the discrete charge allocation fixed during the joint response solve.
-        projector = @set projector.charge_refresh = 0
-    end
-    alg_fixed = @set alg.projector_alg = projector
+    alg_fixed = @set alg.projector_alg = _set_truncation(alg.projector_alg, FixedSpaceTruncation())
+    alg_fixed = _fix_decomposition_allocation(alg_fixed)
     return alg_fixed
-end
-
-"""Convert structured AD cotangents to the vectors used by the fixed-point solver."""
-function _fixedpoint_tangent(x, dx)
-    dx = unthunk(dx)
-    dx isa AbstractZero && return VI.zerovector(x)
-    return x isa Tuple ? ntuple(i -> _fixedpoint_tangent(x[i], dx[i]), length(x)) : dx
-end
-
-"""Prepare the differentiable fixed-point state and gauge-fixed iteration."""
-function _fixedpoint_iteration(env, alg, cache::EmptyProjectorCache, signs)
-    iteration(A, x) = fix_global_phases(
-        fix_relative_phases(ctmrg_iteration(InfiniteSquareNetwork(A), x, alg, cache)[1], signs), env
-    )
-    return env, iteration, identity
-end
-
-function _fixedpoint_iteration(env, alg, cache::SubspaceIterationCache, signs)
-    function iteration(A, x)
-        incoming = SubspaceIterationCache(cache.iteration, x[2])
-        en, _, next = ctmrg_iteration(InfiniteSquareNetwork(A), x[1], alg, incoming)
-        en = fix_global_phases(fix_relative_phases(en, signs), env)
-        # Fix column-frame freedom and remove normal-to-isometry perturbations.
-        aligned = map(next.X, cache.X) do b, ref
-            out = b * (b' * ref)
-            ref + out - ref * (ref' * out)
-        end
-        return en, aligned
-    end
-    rhs(Δenv) = (Δenv, VI.zerovector(cache.X))
-    return (env, cache.X), iteration, rhs
 end
 
 # compute the CTMRG gradient through fixed-point differentiation
@@ -256,26 +221,35 @@ function _rrule(
     )
     _check_algorithm_combination(alg, gradmode)
 
-    env, info, projector_cache = _leading_boundary_with_cache(envinit, InfiniteSquareNetwork(state), alg)
+    alg = _prepare_ctmrg(alg, envinit)
+    env, info = leading_boundary(envinit, state, alg)
 
     # prepare iterating function corresponding to a single gauge-fixed CTMRG iteration
     alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
     alg_gauge = _scrambling_env_gauge(alg) # select appropriate gauge-fixing algorithm
-    env_conv, _, = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed, projector_cache)
-    signs = first(compute_gauge_fix_gauge(env_conv, env, alg_gauge))
-    x, gauge_fixed_iteration, rhs = _fixedpoint_iteration(env, alg_fixed, projector_cache, signs)
-    # Reuse both state and fixed-point VJPs from each pullback evaluation.
-    _, pullback = rrule_via_ad(config, gauge_fixed_iteration, state, x)
-    function ∂f(y)::Tuple{Any, typeof(state), typeof(x)}
-        df = pullback(y)
-        return df[1], df[2], _fixedpoint_tangent(x, df[3])
+    env_conv, _ = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
+    signs, = compute_gauge_fix_gauge(env_conv, env, alg_gauge)
+    # `p` for state, `x` for environment
+    function gauge_fixed_iteration(p, x)
+        # fix global phases relative to the fixed point inside the iteration
+        return fix_global_phases(
+            fix_relative_phases(ctmrg_iteration(InfiniteSquareNetwork(p), x, alg_fixed)[1], signs),
+            env,
+        )
     end
+    # prepare its pullback
+    _, pullback = rrule_via_ad(config, gauge_fixed_iteration, state, env)
+    ∂f(y)::Tuple{Any, typeof(state), typeof(env)} = pullback(y)
+
+    # TODO: try partial-argument VJPs after Enzyme support is added.
+    # fₚ = Base.Fix1(gauge_fixed_iteration, state) # fix state `p`
+    # fₓ = Base.Fix2(gauge_fixed_iteration, env)   # fix environment `x`
 
     function leading_boundary_fixed_pullback((Δenv′, Δinfo))
         Δenv = unthunk(Δenv′)
-        Δx = rhs(Δenv)
-        ∂F∂env = fixedpoint_gradient(Δx, ∂f, Δx, gradmode.solver_alg)
-        return NoTangent(), ZeroTangent(), ∂F∂env, NoTangent()
+        # evaluate the fixed-point gradient
+        ∂E∂env = fixedpoint_gradient(Δenv, ∂f, Δenv, gradmode.solver_alg)
+        return NoTangent(), ZeroTangent(), ∂E∂env, NoTangent()
     end
 
     return (env, info), leading_boundary_fixed_pullback
@@ -332,7 +306,7 @@ function fixedpoint_gradient(∂E∂x, ∂f, y₀, alg::ManualIter)
     _, dx, dy = ∂f(y)
     ϵ = 1.0
     for i in 1:(alg.maxiter)
-        y′ = VI.add(∂E∂x, dy)
+        y′ = ∂E∂x + dy
         _, dxnew, dy = ∂f(y′)
         ϵnew = norm(dxnew - dx)
         Δϵ = ϵ - ϵnew
@@ -448,21 +422,6 @@ function _check_algorithm_combination(::SimultaneousCTMRG{<:FullInfiniteProjecto
           since the corresponding charageristic equations have not yet been implemented; select \
           SimultaneousCTMRG with HalfInfiniteProjector instead to use :ImplicitGradient"
     throw(ArgumentError(msg))
-end
-
-"""Reject characteristic-equation rules that are not defined for SI projectors."""
-function _reject_subspace_iteration_gradient()
-    throw(ArgumentError("SubspaceIterationProjector supports FixedPointGradient or `gradient_alg=nothing`; its ImplicitGradient characteristic equations are not implemented."))
-end
-function _check_algorithm_combination(
-        ::SequentialCTMRG{<:SubspaceIterationProjector}, ::ImplicitGradient
-    )
-    return _reject_subspace_iteration_gradient()
-end
-function _check_algorithm_combination(
-        ::SimultaneousCTMRG{<:SubspaceIterationProjector}, ::ImplicitGradient
-    )
-    return _reject_subspace_iteration_gradient()
 end
 
 
@@ -663,6 +622,7 @@ function PEPSKit._rrule(
         state,
         alg::SimultaneousCTMRG{<:HalfInfiniteProjector},
     )
+    alg = _prepare_ctmrg(alg, envinit)
     env, = leading_boundary(envinit, state, alg)
 
     # gauge-fix SVD isometries

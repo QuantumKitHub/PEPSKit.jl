@@ -66,6 +66,7 @@ include("utility/twistdual.jl")
 include("utility/eigh.jl")
 include("utility/svd.jl")
 include("utility/orth.jl")
+include("utility/subspace_iteration.jl")
 include("utility/rotations.jl")
 include("utility/hook_pullback.jl")
 include("utility/autoopt.jl")
@@ -133,15 +134,13 @@ include("algorithms/contractions/correlator/pepo_1layer.jl")
 include("algorithms/ctmrg/sparse_environments.jl")
 include("algorithms/ctmrg/ctmrg.jl")
 include("algorithms/ctmrg/projectors/projectors.jl")
-include("algorithms/ctmrg/projectors/cache.jl")
 include("algorithms/ctmrg/projectors/halfinfinite.jl")
 include("algorithms/ctmrg/projectors/fullinfinite.jl")
-include("algorithms/ctmrg/projectors/subspaceiter.jl")
-include("algorithms/ctmrg/projectors/subspaceiter_spaces.jl")
 include("algorithms/ctmrg/projectors/c4v_eigh.jl")
 include("algorithms/ctmrg/projectors/c4v_qr.jl")
 include("algorithms/ctmrg/simultaneous.jl")
 include("algorithms/ctmrg/sequential.jl")
+include("algorithms/ctmrg/subspace_iteration.jl")
 include("algorithms/ctmrg/gaugefix.jl")
 include("algorithms/ctmrg/c4v.jl")
 include("algorithms/ctmrg/initialization.jl")
@@ -188,7 +187,8 @@ export initialize_ctmrg_environment,
     RandomInitialization, ProductStateInitialization, ApplicationInitialization, IdentityInitialization
 export corner, edge, setcorner!, setedge!
 export FixedSpaceTruncation, SiteDependentTruncation
-export HalfInfiniteProjector, FullInfiniteProjector, SubspaceIterationProjector
+export HalfInfiniteProjector, FullInfiniteProjector
+export SubspaceIteration
 export C4vCTMRG, C4vEighProjector, C4vQRProjector
 export initialize_random_c4v_env, initialize_singlet_c4v_env
 export LocalOperator, physicalspace
