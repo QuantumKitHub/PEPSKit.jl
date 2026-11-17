@@ -69,19 +69,16 @@ function ctmrg_iteration(
         alg::SimultaneousCTMRG{<:SubspaceIterationProjector},
         cache::SubspaceIterationCache,
     )
-    if !_compatible_subspace_cache(cache, env, alg.projector_alg)
+    if !_compatible_subspace_cache(cache, env)
         cache = initialize_projector_cache(network, env, alg)
     end
     enlarged_corners = _expand_corners_simultaneously(network, env)
     projectors, projector_info = simultaneous_projectors(
-        enlarged_corners, env, alg.projector_alg, cache.X, cache.Y,
+        enlarged_corners, env, alg.projector_alg, cache.X,
         _subspace_charge_refresh(cache, alg.projector_alg)
     )
     env′ = renormalize_simultaneously(enlarged_corners, projectors, network, env)
-    cache′, subspace_error = _update_subspace_cache(
-        cache,
-        projector_info.X, projector_info.Y
-    )
+    cache′, subspace_error = _update_subspace_cache(cache, projector_info.X)
     info = (;
         contraction_metrics = (;
             projector_info.truncation_error, subspace_error,
@@ -103,14 +100,13 @@ function _split_proj_and_info(proj_and_info)
     info = (; truncation_error, U, S, V)
     if hasproperty(first(proj_and_info)[2], :X)
         X = map(x -> x[2].X, proj_and_info)
-        Y = isnothing(first(proj_and_info)[2].Y) ? nothing : map(x -> x[2].Y, proj_and_info)
-        info = (; info..., X, Y)
+        info = (; info..., X)
     end
     return (P_left, P_right), info
 end
 
 """Select optional recycled bases for one projector coordinate."""
-_projector_arguments(coordinate, X, Y, refresh::Bool) = (X[coordinate...], _subspace_grid_entry(Y, coordinate...), refresh)
+_projector_arguments(coordinate, X, refresh::Bool) = (X[coordinate...], refresh)
 _projector_arguments(coordinate) = ()
 
 """
@@ -147,10 +143,10 @@ end
 
 function simultaneous_projectors(
         coordinate::NTuple{3, Int}, enlarged_corners::Array{E, 3}, env,
-        alg::SubspaceIterationProjector, X, Y, refresh::Bool = false,
+        alg::SubspaceIterationProjector, X, refresh::Bool = false,
     ) where {E}
     ec, trunc = enlarged_corner_inputs(enlarged_corners, coordinate, env, alg, Val(4))
-    return compute_projector(ec, alg, (; X, Y, trunc, refresh))
+    return compute_projector(ec, alg, (; X, trunc, refresh))
 end
 
 """

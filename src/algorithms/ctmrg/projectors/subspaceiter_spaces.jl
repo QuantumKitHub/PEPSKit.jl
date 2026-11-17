@@ -35,7 +35,7 @@ function _adaptive_subspace_space(L, R, alg, ranges)
     available = infimum(fuse(codomain(L)), fuse(domain(R)))
     budget = Int(alg.subspace)
     K = isnothing(ranges.X) ? zero(available) : fuse(domain(ranges.X))
-    valid = _compatible_rangefinders(ranges.X, ranges.Y, L, R, K, _retain_subspace_left(alg)) &&
+    valid = _compatible_rangefinder(ranges.X, L, R, K) &&
         infimum(K, available) == K && dim(K) <= budget
     if ranges.trunc isa TruncationSpace
         valid &= infimum(K, ranges.trunc.space) == ranges.trunc.space

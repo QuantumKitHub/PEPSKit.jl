@@ -9,20 +9,16 @@ _projector_convergence_ready(cache, alg) = true
 
 """
 Runtime rangefinder cache for SI-CTMRG iterations.
-Both `X` and `Y` embed the trial space into the full right and left spaces, respectively.
+`X` embeds the trial space into the full right space.
 """
-struct SubspaceIterationCache{X, Y} <: ProjectorCache
+struct SubspaceIterationCache{X} <: ProjectorCache
     iteration::Int
     X::X
-    Y::Y
 end
 
-"""Copy all SI tensor grids while preserving cache metadata."""
+"""Copy the SI tensor grid while preserving cache metadata."""
 function Base.copy(cache::SubspaceIterationCache)
-    return SubspaceIterationCache(
-        cache.iteration,
-        map(_copy_subspace_grid, (cache.X, cache.Y))...,
-    )
+    return SubspaceIterationCache(cache.iteration, copy(cache.X))
 end
 
 """Initialize an empty runtime projector cache for a fresh boundary contraction."""
@@ -34,46 +30,25 @@ function ctmrg_iteration(network, env, alg::CTMRGAlgorithm, cache::EmptyProjecto
     return env′, info, cache
 end
 
-"""Report whether cached SI rangefinders match the current map spaces and scalar type."""
-function _compatible_rangefinders(
-        X, Y, halfinf_left, halfinf_right,
-        subspace::ElementarySpace, require_left::Bool = true,
-    )
-    isnothing(X) && return false
-    right = scalartype(X) == scalartype(halfinf_left) &&
-        space(X) == (domain(halfinf_right) ← subspace)
-    left = !require_left || (
-        !isnothing(Y) &&
-            scalartype(Y) == scalartype(halfinf_left) &&
-            space(Y) == (codomain(halfinf_left) ← subspace)
-    )
-    return right && left
+"""Report whether a cached SI rangefinder matches the current map spaces and scalar type."""
+function _compatible_rangefinder(X, L, R, subspace::ElementarySpace)
+    return !isnothing(X) && scalartype(X) == scalartype(L) && space(X) == (domain(R) ← subspace)
 end
 
-"""Copy an optional cache grid while leaving absent state unallocated."""
-_copy_subspace_grid(grid) = isnothing(grid) ? nothing : copy(grid)
-
-"""Index a trial grid, returning no left basis when that grid is absent."""
-_subspace_grid_entry(grid, indices...) = isnothing(grid) ? nothing : grid[indices...]
-
-"""Check grid layout, scalar type, and state required by the configured update."""
-function _compatible_subspace_cache(cache, env, alg)
-    return all(g -> isnothing(g) || size(g) == size(env), (cache.X, cache.Y)) &&
-        scalartype(first(cache.X)) == scalartype(env) &&
-        (!_retain_subspace_left(alg) || !isnothing(cache.Y))
+"""Check grid layout and scalar type."""
+function _compatible_subspace_cache(cache, env)
+    return size(cache.X) == size(env) && scalartype(first(cache.X)) == scalartype(env)
 end
 
 """Rotate a directional tensor grid without mutating arrays needed by backpropagation."""
-_rotate_subspace_grid(grid) = isnothing(grid) ? nothing : reverse(permutedims(circshift(grid, (-1, 0, 0)), (1, 3, 2)); dims = 2)
+_rotate_subspace_grid(grid) = reverse(permutedims(circshift(grid, (-1, 0, 0)), (1, 3, 2)); dims = 2)
 
-"""Rotate all directional SI cache arrays counter-clockwise."""
+"""Rotate the directional SI cache grid counter-clockwise."""
 function Base.rotl90(cache::SubspaceIterationCache)
-    X′, Y′ = map(_rotate_subspace_grid, (cache.X, cache.Y))
-    return SubspaceIterationCache(cache.iteration, X′, Y′)
+    return SubspaceIterationCache(cache.iteration, _rotate_subspace_grid(cache.X))
 end
 
 """RMS sine of trial-space changes, computed without subtracting nearly equal norms."""
-_subspace_error(::Nothing, ::Nothing) = 0.0
 function _subspace_error(old, new)
     size(old) == size(new) || return Inf
     return maximum(zip(old, new)) do (a, b)
@@ -83,7 +58,6 @@ function _subspace_error(old, new)
 end
 @non_differentiable _subspace_error(args...)
 
-function _update_subspace_cache(cache, X, Y)
-    error = max(_subspace_error(cache.X, X), _subspace_error(cache.Y, Y))
-    return SubspaceIterationCache(cache.iteration + 1, X, Y), error
+function _update_subspace_cache(cache, X)
+    return SubspaceIterationCache(cache.iteration + 1, X), _subspace_error(cache.X, X)
 end

@@ -19,8 +19,7 @@ function ProjectorAlgorithm(;
         subspace = nothing,
         charge_refresh::Int = Defaults.charge_refresh,
         charge_probe = nothing,
-        update::Symbol = :independent,
-        n_subspace_iter::Int = 0,
+        n_subspace_iter::Int = 1,
         rotate_basis::Bool = true,
         rng = Random.default_rng(),
         trunc = (;),
@@ -72,8 +71,6 @@ function ProjectorAlgorithm(;
             subspace isa Integer && subspace < truncation_strategy.howmany &&
                 throw(ArgumentError("The trial dimension must be at least the retained rank."))
         end
-        update in (:independent, :alternating, :alternating_refined) ||
-            throw(ArgumentError("unknown subspace update: $update"))
         n_subspace_iter >= 0 || throw(ArgumentError("n_subspace_iter must be nonnegative."))
         orth_alg = _alg_or_nt(OrthAdjoint, orth_alg)
         return alg_type(
@@ -84,7 +81,6 @@ function ProjectorAlgorithm(;
             charge_refresh,
             charge_probe,
             verbosity,
-            update,
             n_subspace_iter,
             rotate_basis,
             rng,

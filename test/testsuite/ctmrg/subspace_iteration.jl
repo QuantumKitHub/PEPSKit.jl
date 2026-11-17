@@ -19,8 +19,7 @@ end
 function ctmrg_subspace_iteration_configuration(AT)
     return @testset "SubspaceIterationProjector configuration" begin
         alg = SubspaceIterationProjector(; subspace = ℂ^10)
-        @test alg.update == :independent
-        @test alg.n_subspace_iter == 0 && alg.rotate_basis
+        @test alg.n_subspace_iter == 1 && alg.rotate_basis
 
         configured = SimultaneousCTMRG(;
             projector_alg = (;
@@ -39,7 +38,6 @@ function ctmrg_subspace_iteration_configuration(AT)
         @test_throws ArgumentError SubspaceIterationProjector(; subspace = 12, trunc = truncrank(16))
         @test_throws ArgumentError SubspaceIterationProjector(; subspace = 24, trunc = truncrank(16; rev = false))
         @test_throws ArgumentError SubspaceIterationProjector(; subspace = 24, charge_refresh = -1)
-        @test_throws ArgumentError SubspaceIterationProjector(; subspace = ℂ^10, update = :unknown)
         @test_throws ArgumentError SubspaceIterationProjector(; subspace = ℂ^10, n_subspace_iter = -1)
         @test_throws ArgumentError SubspaceIterationProjector(;
             subspace = ℂ^10, trunc = truncerror(; rtol = 1.0e-8)
@@ -60,11 +58,11 @@ function ctmrg_subspace_iteration_convergence(AT)
         full_alg = MatrixAlgebraKit.TruncatedAlgorithm(DefaultAlgorithm(), trunc)
         Ufull, Sfull, Vfull, = svd_trunc(L * R, full_alg)
         alg = SubspaceIterationProjector(; subspace = ℂ^3)
-        rangefinders = (; X = nothing, Y = nothing, trunc)
+        rangefinders = (; X = nothing, trunc)
         local si
         for _ in 1:5
             si = PEPSKit._subspace_iteration_decomposition(L, R, alg, rangefinders)
-            rangefinders = (; X = si.X, Y = si.Y, trunc)
+            rangefinders = (; X = si.X, trunc)
         end
 
         @test norm(si.U * si.U' - Ufull * Ufull') < 1.0e-4
@@ -80,11 +78,11 @@ function ctmrg_subspace_iteration_half_environments(AT)
         Q = [adapt(AT, randn(ComplexF64, ℂ^5 ← ℂ^5)) for _ in 1:4]
         left, right = PEPSKit.SIHalfEnvironment(Q[1], Q[2]), PEPSKit.SIHalfEnvironment(Q[3], Q[4])
         alg = SubspaceIterationProjector(; subspace = ℂ^3)
-        X, Y = PEPSKit.rangefinder_initialize(left, right, alg.subspace, alg)
-        inputs = (; X, Y, trunc = truncspace(ℂ^2))
+        X = PEPSKit.rangefinder_initialize(left, right, alg.subspace, alg)
+        inputs = (; X, trunc = truncspace(ℂ^2))
         implicit = PEPSKit._subspace_iteration_decomposition(left, right, alg, inputs)
-        L = Q[1] * Q[2] / (norm(Q[1]) * norm(Q[2]))
-        R = Q[3] * Q[4] / (norm(Q[3]) * norm(Q[4]))
+        L = Q[1] * Q[2]
+        R = Q[3] * Q[4]
         explicit = PEPSKit._subspace_iteration_decomposition(L, R, alg, inputs)
         @test implicit.S ≈ explicit.S
         @test implicit.U * implicit.S * implicit.V ≈ explicit.U * explicit.S * explicit.V
@@ -132,7 +130,7 @@ function ctmrg_subspace_iteration_phase_caches(AT)
         cache = initialize_projector_cache(network, env, alg)
         env, _, cache = ctmrg_iteration(network, env, alg, cache)
         _, _, cache = ctmrg_iteration(network, env, alg, cache)
-        @test all(grid -> size(grid) == (4, 2, 3), (cache.X, cache.Y))
+        @test size(cache.X) == (4, 2, 3)
 
         basis = adapt(AT, isometry(ComplexF64, ℂ^3 ← ℂ^2))
         rotated = copy(basis)
@@ -143,21 +141,15 @@ function ctmrg_subspace_iteration_phase_caches(AT)
         @test PEPSKit._subspace_error([basis], [basis * rotation]) < 1.0e-14
 
         values = reshape(collect(1:24), 4, 2, 3)
-        original = PEPSKit.SubspaceIterationCache(2, values, -values)
+        original = PEPSKit.SubspaceIterationCache(2, values)
         copied = copy(original)
-        @test all(
-            pair -> pair[1] == pair[2] && pair[1] !== pair[2], zip(
-                (copied.X, copied.Y),
-                (original.X, original.Y),
-            )
-        )
+        @test copied.X == original.X && copied.X !== original.X
         @test copied.iteration == 2
         rotated = original
         for _ in 1:4
             rotated = rotl90(rotated)
         end
-        @test (rotated.X, rotated.Y) ==
-            (values, -values)
+        @test rotated.X == values
         @test rotated.iteration == 2
     end
 end
@@ -253,17 +245,18 @@ function ctmrg_subspace_iteration_symmetry_sectors(AT)
         L = first(left_orth(adapt(AT, randn(ComplexF64, space(L))))) * L
         R = first(left_orth(adapt(AT, randn(ComplexF64, space(L)))))
         alg = SubspaceIterationProjector(; subspace = K)
-        X, Y = PEPSKit.rangefinder_initialize(L, R, K, alg)
-        inputs = (; X, Y, trunc = truncspace(χ))
+        X = PEPSKit.rangefinder_initialize(L, R, K, alg)
+        inputs = (; X, trunc = truncspace(χ))
         local result
         for _ in 1:3
             result = PEPSKit._subspace_iteration_decomposition(L, R, alg, inputs)
-            inputs = (; result.X, result.Y, inputs.trunc)
+            inputs = (; result.X, inputs.trunc)
         end
         U, S, V, = svd_trunc(L * R, MatrixAlgebraKit.TruncatedAlgorithm(DefaultAlgorithm(), truncspace(χ)))
         @test space(result.S, 1) == χ
-        @test domain(result.X) == domain(result.Y) == ProductSpace(K)
-        @test result.U * result.S * result.V ≈ U * S * V rtol = 1.0e-7
+        @test domain(result.X) == ProductSpace(K)
+        actual, expected = result.U * result.S * result.V, U * S * V
+        @test actual / norm(actual) ≈ expected / norm(expected) rtol = 1.0e-7
         @test result.U' * result.U ≈ id(ComplexF64, χ)
         @test result.V * result.V' ≈ id(ComplexF64, χ)
 

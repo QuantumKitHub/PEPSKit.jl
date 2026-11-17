@@ -27,50 +27,39 @@ function MatrixAlgebraKit.right_orth!(t::AbstractTensorMap, a::SubspaceCountingO
 end
 
 """Evaluate the defining recurrences using an explicit full environment."""
-function expected_subspace_ranges(M, X, Y, update, q)
-    if update == :independent
-        for _ in 0:q
-            X = first(left_orth(M' * M * X))
-            Y = first(left_orth(M * M' * Y))
-        end
-    else
-        for _ in 1:q
-            X = first(left_orth(M' * M * X))
-        end
-        Q = first(left_orth(M * X))
+function expected_subspace_ranges(M, X, q)
+    Q = first(left_orth(M * X))
+    for _ in 1:q
         X = first(left_orth(M' * Q))
-        Y = update == :alternating_refined ? first(left_orth(M * X)) : Q
+        Q = first(left_orth(M * X))
     end
-    return X, Y
+    return first(left_orth(M' * Q)), Q
 end
 
 """Check recurrences for the subspace iteration projector."""
 function ctmrg_subspace_updates_recurrences(AT)
     return @testset "Range recurrences and factorization counts" begin
-        @testset "$T, $update, q=$q" for T in (Float64, ComplexF64), update in (:independent, :alternating, :alternating_refined), q in (0, 1)
+        @testset "$T, q=$q" for T in (Float64, ComplexF64), q in (0, 1)
             Random.seed!(264)
             L, R = adapt(AT, randn(T, ℂ^9 ← ℂ^9)), adapt(AT, randn(T, ℂ^9 ← ℂ^7))
-            X, Y = first(left_orth(adapt(AT, randn(T, ℂ^7 ← ℂ^4)))), last(right_orth(adapt(AT, randn(T, ℂ^4 ← ℂ^9))))'
+            X = first(left_orth(adapt(AT, randn(T, ℂ^7 ← ℂ^4))))
             counter = SubspaceCountingOrth(OrthAdjoint().fwd_alg, Ref(0), Ref(0))
             alg = SubspaceIterationProjector(;
-                subspace = ℂ^4, update, n_subspace_iter = q,
+                subspace = ℂ^4, n_subspace_iter = q,
                 rotate_basis = false, orth_alg = OrthAdjoint(; fwd_alg = counter)
             )
-            before = deepcopy((X, Y))
+            before = copy(X)
             trunc = truncspace(ℂ^2)
-            result = PEPSKit._subspace_iteration_decomposition(L, R, alg, (; X, Y, trunc))
-            expected_count = update == :alternating_refined ? 2(q + 1) + 1 : 2(q + 1)
+            result = PEPSKit._subspace_iteration_decomposition(L, R, alg, (; X, trunc))
+            expected_count = 2(q + 1)
             @test counter.qr[] + counter.lq[] == expected_count
-            if update == :alternating
-                @test counter.lq[] == 1
-            end
-            @test (X, Y) == before
-            Xref, Yref = expected_subspace_ranges(L * R, X, Y, update, q)
+            @test counter.lq[] == 1
+            @test X == before
+            Xref, Yref = expected_subspace_ranges(L * R, X, q)
             @test result.X * result.X' ≈ Xref * Xref' atol = 1.0e-10
-            Ynew = PEPSKit.rangefinder_update(X, Y, L, R, alg.subspace, alg).Y
+            Ynew = PEPSKit.rangefinder_update(X, L, R, alg.subspace, alg).Y
             @test Ynew * Ynew' ≈ Yref * Yref' atol = 1.0e-10
             @test Ynew' * Ynew ≈ id(T, domain(Ynew)) atol = 1.0e-10
-            @test isnothing(result.Y) == (update != :independent)
             core = Yref' * L * R * Xref
             u, s, v, = svd_trunc(core, TruncatedAlgorithm(DefaultAlgorithm(), trunc))
             expected = Yref * u * s * v * Xref'
@@ -84,14 +73,14 @@ end
 """Check complete sectors for the subspace iteration projector."""
 function ctmrg_subspace_updates_complete_sectors(AT)
     return @testset "Complete and rectangular sectors" begin
-        @testset "$update, $m ← $n, q=$q" for update in (:independent, :alternating, :alternating_refined), (m, n) in ((7, 5), (5, 7), (5, 5)), q in (0, 1)
+        @testset "$m ← $n, q=$q" for (m, n) in ((7, 5), (5, 7), (5, 5)), q in (0, 1)
             Random.seed!(265)
             M = adapt(AT, randn(ComplexF64, ℂ^m ← ℂ^n))
-            alg = SubspaceIterationProjector(; subspace = ℂ^20, update, n_subspace_iter = q, rotate_basis = false)
+            alg = SubspaceIterationProjector(; subspace = ℂ^20, n_subspace_iter = q, rotate_basis = false)
             trunc = truncspace(ℂ^2)
             result = PEPSKit._subspace_iteration_decomposition(
                 M, id(ℂ^n), alg,
-                (; X = nothing, Y = nothing, trunc)
+                (; X = nothing, trunc)
             )
             u, s, v, = svd_trunc(M, TruncatedAlgorithm(DefaultAlgorithm(), trunc))
             actual, expected = result.U * result.S * result.V, u * s * v
@@ -99,13 +88,13 @@ function ctmrg_subspace_updates_complete_sectors(AT)
             @test result.X' * result.X ≈ id(ComplexF64, domain(result.X)) atol = 1.0e-10
 
         end
-        @testset "$S, $update" for (S, charges) in (
-                    (U1Irrep, (0, 1)),
-                    (SU2Irrep, (0, 1 // 2)),
-                    (A4Irrep, (0, 3)),
-                    (FermionParity ⊠ U1Irrep, ((0, 0), (1, 1))),
-                    (FibonacciAnyon, (:I, :τ)),
-                ), update in (:independent, :alternating, :alternating_refined)
+        @testset "$S" for (S, charges) in (
+                (U1Irrep, (0, 1)),
+                (SU2Irrep, (0, 1 // 2)),
+                (A4Irrep, (0, 3)),
+                (FermionParity ⊠ U1Irrep, ((0, 0), (1, 1))),
+                (FibonacciAnyon, (:I, :τ)),
+            )
             W = Vect[S](charges[1] => 3, charges[2] => 7)
             K = Vect[S](charges[1] => 3, charges[2] => 4)
             χ = Vect[S](charges[1] => 2, charges[2] => 2)
@@ -115,12 +104,12 @@ function ctmrg_subspace_updates_complete_sectors(AT)
                 b[diagind(b)] .= 0.1 .^ (0:(size(b, 1) - 1))
             end
             A = first(left_orth(adapt(AT, randn(ComplexF64, space(A))))) * A * last(right_orth(adapt(AT, randn(ComplexF64, space(A)))))
-            alg = SubspaceIterationProjector(; subspace = K, update)
-            state = (; X = nothing, Y = nothing, trunc = truncspace(χ))
+            alg = SubspaceIterationProjector(; subspace = K)
+            state = (; X = nothing, trunc = truncspace(χ))
             local result
             for _ in 1:5
                 result = PEPSKit._subspace_iteration_decomposition(A, id(ComplexF64, W), alg, state)
-                state = (; result.X, result.Y, state.trunc)
+                state = (; result.X, state.trunc)
             end
             u, s, v, = svd_trunc(A, TruncatedAlgorithm(DefaultAlgorithm(), state.trunc))
             actual, expected = result.U * result.S * result.V, u * s * v
@@ -133,20 +122,16 @@ end
 
 """Check recovery for the subspace iteration projector."""
 function ctmrg_subspace_updates_recovery(AT)
-    return @testset "Cache configuration and scalar recovery" begin
+    return @testset "Cache scalar recovery" begin
         @testset "$flavor" for flavor in (SimultaneousCTMRG, SequentialCTMRG)
             Random.seed!(268)
             ψ = adapt(AT, InfinitePEPS(ℂ^2, ℂ^2))
             network, env = InfiniteSquareNetwork(ψ), CTMRGEnv(ψ, ℂ^3)
-            alternating_alg = flavor(0.0, 1, 1, 0, SubspaceIterationProjector(; subspace = ℂ^5, update = :alternating))
-            independent_alg = flavor(0.0, 1, 1, 0, SubspaceIterationProjector(; subspace = ℂ^5))
-            cache = PEPSKit.initialize_projector_cache(network, env, alternating_alg)
-            _, _, reset = PEPSKit.ctmrg_iteration(network, env, independent_alg, cache)
-            @test !isnothing(reset.Y)
+            alg = flavor(0.0, 1, 1, 0, SubspaceIterationProjector(; subspace = ℂ^5))
             real_ψ = adapt(AT, InfinitePEPS(randn, Float64, ℂ^2, ℂ^2))
             real_network, real_env = InfiniteSquareNetwork(real_ψ), CTMRGEnv(real_ψ, ℂ^3)
-            real_cache = PEPSKit.initialize_projector_cache(real_network, real_env, alternating_alg)
-            _, _, reset = PEPSKit.ctmrg_iteration(network, env, alternating_alg, real_cache)
+            real_cache = PEPSKit.initialize_projector_cache(real_network, real_env, alg)
+            _, _, reset = PEPSKit.ctmrg_iteration(network, env, alg, real_cache)
             @test scalartype(first(reset.X)) == ComplexF64
         end
     end
@@ -155,16 +140,11 @@ end
 """Check initialization for the subspace iteration projector."""
 function ctmrg_subspace_updates_initialization(AT)
     return @testset "Seeded initialization" begin
-        @testset "$update" for update in (:independent, :alternating, :alternating_refined)
-            a, b = [SubspaceIterationProjector(; subspace = ℂ^4, update, rng = Random.Xoshiro(269)) for _ in 1:2]
-            first_bases = PEPSKit.rangefinder_initialize(ComplexF64, ProductSpace(ℂ^7), ProductSpace(ℂ^6), a.subspace, a)
-            second_bases = PEPSKit.rangefinder_initialize(ComplexF64, ProductSpace(ℂ^7), ProductSpace(ℂ^6), b.subspace, b)
-            @test first_bases == second_bases
-            @test first_bases[1]' * first_bases[1] ≈ id(ComplexF64, ℂ^4) atol = 1.0e-12
-            if !isnothing(first_bases[2])
-                @test first_bases[2]' * first_bases[2] ≈ id(ComplexF64, ℂ^4) atol = 1.0e-12
-            end
-        end
+        a, b = [SubspaceIterationProjector(; subspace = ℂ^4, rng = Random.Xoshiro(269)) for _ in 1:2]
+        first_bases = PEPSKit.rangefinder_initialize(ComplexF64, ProductSpace(ℂ^6), a.subspace, a)
+        second_bases = PEPSKit.rangefinder_initialize(ComplexF64, ProductSpace(ℂ^6), b.subspace, b)
+        @test first_bases == second_bases
+        @test first_bases' * first_bases ≈ id(ComplexF64, ℂ^4) atol = 1.0e-12
     end
 end
 

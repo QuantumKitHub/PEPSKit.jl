@@ -230,24 +230,19 @@ function _fixedpoint_iteration(env, alg, cache::EmptyProjectorCache, signs)
 end
 
 function _fixedpoint_iteration(env, alg, cache::SubspaceIterationCache, signs)
-    # Krylov vectors and AD cotangents must use the same concrete tensor storage.
-    bases = isnothing(cache.Y) ? (cache.X,) : (cache.X, map(copy, cache.Y))
     function iteration(A, x)
-        incoming = SubspaceIterationCache(cache.iteration, x[2][1], isnothing(cache.Y) ? nothing : x[2][2])
+        incoming = SubspaceIterationCache(cache.iteration, x[2])
         en, _, next = ctmrg_iteration(InfiniteSquareNetwork(A), x[1], alg, incoming)
         en = fix_global_phases(fix_relative_phases(en, signs), env)
-        nextbases = isnothing(next.Y) ? (next.X,) : (next.X, next.Y)
         # Fix column-frame freedom and remove normal-to-isometry perturbations.
-        aligned = map(nextbases, bases) do grid, refs
-            map(grid, refs) do b, ref
-                out = b * (b' * ref)
-                ref + out - ref * (ref' * out)
-            end
+        aligned = map(next.X, cache.X) do b, ref
+            out = b * (b' * ref)
+            ref + out - ref * (ref' * out)
         end
         return en, aligned
     end
-    rhs(Δenv) = (Δenv, VI.zerovector(bases))
-    return (env, bases), iteration, rhs
+    rhs(Δenv) = (Δenv, VI.zerovector(cache.X))
+    return (env, cache.X), iteration, rhs
 end
 
 # compute the CTMRG gradient through fixed-point differentiation

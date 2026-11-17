@@ -89,10 +89,9 @@ function ctmrg_iteration(
 end
 
 """Replace the updated direction using projector columns without mutating the old cache."""
-function _replace_subspace_phase(grid, columns, key::Symbol)
-    isnothing(grid) && return nothing
+function _replace_subspace_phase(grid, columns)
     return map(CartesianIndices(grid)) do I
-        return I[1] == WEST ? getproperty(columns[I[3]], key)[I[2]] : grid[I]
+        return I[1] == WEST ? columns[I[3]].X[I[2]] : grid[I]
     end
 end
 
@@ -103,21 +102,20 @@ function ctmrg_iteration(
     )
     truncation_error = zero(real(scalartype(network)))
 
-    if !_compatible_subspace_cache(cache, env, alg.projector_alg)
+    if !_compatible_subspace_cache(cache, env)
         cache = initialize_projector_cache(network, env, alg)
     end
-    grids = (cache.X, cache.Y)
+    X = cache.X
 
     # Perform four directional moves, expressing each one as a column left-move.
     for _ in 1:4
         # Select the rangefinders aligned with the current left-move direction.
-        Xdirection = grids[1][WEST, :, :]
-        Ydirection = _subspace_grid_entry(grids[2], WEST, :, :)
+        Xdirection = X[WEST, :, :]
 
         columns = ()
         for col in 1:size(network, 2)
             env, info = ctmrg_leftmove(
-                col, network, env, alg, Xdirection, Ydirection,
+                col, network, env, alg, Xdirection,
                 _subspace_charge_refresh(cache, alg.projector_alg)
             )
             columns = (columns..., info)
@@ -126,19 +124,14 @@ function ctmrg_iteration(
             end
         end
 
-        grids = map(
-            (grid, key) -> _rotate_subspace_grid(_replace_subspace_phase(grid, columns, key)),
-            grids, (:X, :Y),
-        )
+        X = _rotate_subspace_grid(_replace_subspace_phase(X, columns))
 
         # Rotate the network, environment, and cache into the frame of the next left move.
         network = rotate_north(network, EAST)
         env = rotate_north(env, EAST)
     end
 
-    cache′, subspace_error = _update_subspace_cache(
-        cache, grids...
-    )
+    cache′, subspace_error = _update_subspace_cache(cache, X)
     info = (; contraction_metrics = (; truncation_error, subspace_error))
     return env, info, cache′
 end
@@ -172,10 +165,10 @@ end
 
 function sequential_projectors(
         coordinate::NTuple{3, Int}, network, env::CTMRGEnv,
-        alg::SubspaceIterationProjector, X, Y, refresh::Bool = false,
+        alg::SubspaceIterationProjector, X, refresh::Bool = false,
     )
     ec, trunc = enlarged_corner_inputs(network, coordinate, env, alg, Val(4))
-    return compute_projector(ec, alg, (; X, Y, trunc, refresh))
+    return compute_projector(ec, alg, (; X, trunc, refresh))
 end
 
 """
