@@ -15,6 +15,7 @@ function timeevol_timestep(AT)
         dt, nstep = 1.0e-2, 50
         # manual timestep
         evolver = TimeEvolver(ψ0, H, dt, nstep, alg, env0)
+        allocator = evolver.allocator
         ψ1, env1, info1 = deepcopy(ψ0), deepcopy(env0), nothing
         for iter in 0:(nstep - 1)
             ψ1, env1, info1 = timestep(evolver, ψ1, env1)
@@ -24,6 +25,9 @@ function timeevol_timestep(AT)
         # for-loop syntax
         # Restart the exhausted evolver using the public timestep keywords.
         ψ3, env3, info3 = timestep(evolver, ψ0, env0; iter = 0, t = 0.0)
+        saved = (ψ3, env3, info3)
+        snapshot = deepcopy(saved)
+        @test (ψ3, env3, info3.ϵ) == PEPSKit.su_iter(ψ0, evolver.circuit, evolver.alg, env0)
         for state in evolver
             ψ3, env3, info3 = state
         end
@@ -31,5 +35,7 @@ function timeevol_timestep(AT)
         @test ψ1 == ψ2 == ψ3
         @test env1 == env2 == env3
         @test info1 == info2 == info3
+        @test evolver.allocator === allocator
+        @test saved == snapshot # later scratch reuse must not overwrite earlier outputs
     end
 end

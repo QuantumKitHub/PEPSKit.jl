@@ -38,6 +38,10 @@ struct SUState{S <: InfiniteState, E <: SUWeight, N <: Number}
     env::E
 end
 
+# Also covers trivial simple update used by SUGauge.
+TimeEvolver(alg::SimpleUpdate, dt::Number, nstep::Int, circuit, state::SUState) =
+    TimeEvolver(alg, dt, nstep, circuit, state, default_allocator(state.psi, SerialScheduler()))
+
 """
     TimeEvolver(
         psi0::Union{InfinitePEPS, InfinitePEPO}, H::LocalOperator, dt::Number,
@@ -118,15 +122,16 @@ function _su_iter!(
 end
 
 """
-One iteration of simple update
+One iteration of simple update. Pass `allocator` to reuse contraction scratch;
+`TimeEvolver` supplies its owned allocator automatically.
 """
 function su_iter(
         state::InfiniteState, circuit::LocalCircuit,
-        alg::SimpleUpdate, env::SUWeight
+        alg::SimpleUpdate, env::SUWeight;
+        allocator = default_allocator(state, SerialScheduler())
     )
     state2, env2, ϵ = deepcopy(state), deepcopy(env), 0.0
-    # the gates are applied one after another, so a single allocator serves all of them
-    allocator = default_allocator(state, SerialScheduler())
+    # Gates are applied sequentially and share the same scratch allocator.
     for (sites, gate) in circuit.gates
         if length(sites) == 1
             # 1-site gate
@@ -162,7 +167,7 @@ end
 function Base.iterate(it::TimeEvolver{<:SimpleUpdate}, state = it.state)
     iter, t = state.iter, state.t
     (iter == it.nstep) && return nothing
-    psi, env, ϵ = su_iter(state.psi, it.circuit, it.alg, state.env)
+    psi, env, ϵ = su_iter(state.psi, it.circuit, it.alg, state.env; allocator = it.allocator)
     # update internal state
     iter += 1
     t += it.dt

@@ -19,7 +19,7 @@ end
 function _random_c4v_peps(AT, P, V)
     peps = InfinitePEPS(randn, stype, P, V)
     BraidingStyle(sectortype(P)) isa Bosonic && symmetrize!(peps, RotateReflect())
-    return adapt(AT, InfinitePEPS(map(a -> a / norm(a), peps.A)))
+    return adapt(AT, InfinitePEPS(map(normalize, peps.A)))
 end
 
 function _random_local_operator(P)
