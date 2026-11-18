@@ -14,11 +14,11 @@ $(TYPEDFIELDS)
 
 Construct a `FullPullback` algorithm struct from the following keyword arguments:
 
-* `degeneracy_atol::Real=$(Defaults.rrule_degeneracy_atol)` : Absolute tolerance for idendifying degenerate subspaces.
+* `degeneracy_atol::Float64=$(Defaults.rrule_degeneracy_atol)` : Absolute tolerance for identifying degenerate subspaces.
 * `verbosity::Int=0` : Suppresses all output if `≤0`, prints gauge dependency warnings if `1`, and always prints gauge dependency if `≥2`.
 """
-@kwdef struct FullPullback{T <: Real}
-    degeneracy_atol::T = Defaults.rrule_degeneracy_atol
+@kwdef struct FullPullback
+    degeneracy_atol::Float64 = Defaults.rrule_degeneracy_atol
     verbosity::Int = 0
 end
 
@@ -37,11 +37,11 @@ $(TYPEDFIELDS)
 
 Construct a `TruncPullback` algorithm struct from the following keyword arguments:
 
-* `degeneracy_atol::Real=$(Defaults.rrule_degeneracy_atol)` : Absolute tolerance for idendifying degenerate subspaces.
+* `degeneracy_atol::Float64=$(Defaults.rrule_degeneracy_atol)` : Absolute tolerance for identifying degenerate subspaces.
 * `verbosity::Int=0` : Suppresses all output if `≤0`, prints gauge dependency warnings if `1`, and always prints gauge dependency if `≥2`.
 """
-@kwdef struct TruncPullback{T <: Real}
-    degeneracy_atol::T = Defaults.rrule_degeneracy_atol
+@kwdef struct TruncPullback
+    degeneracy_atol::Float64 = Defaults.rrule_degeneracy_atol
     verbosity::Int = 0
 end
 
@@ -288,15 +288,13 @@ end
 ## Reverse-rule algorithms
 #
 
-function _get_pullback_gauge_tol(verbosity::Int)
-    return function (Δ)
-        if verbosity ≤ 0 # never print gauge sensitivity
-            return Inf
-        elseif verbosity == 1 # print gauge sensitivity above default atol
-            return MatrixAlgebraKit.default_pullback_gauge_atol(promote(map(norm, Δ)...))
-        else # always print gauge sensitivity
-            return 0.0
-        end
+function _get_pullback_gauge_tol(Δ, verbosity::Int)
+    if verbosity ≤ 0 # never print gauge sensitivity
+        return Inf
+    elseif verbosity == 1 # print gauge sensitivity above default atol
+        return MatrixAlgebraKit.default_pullback_gauge_atol(promote(map(norm, Δ)...))
+    else # always print gauge sensitivity
+        return 0.0
     end
 end
 
@@ -312,12 +310,10 @@ function ChainRulesCore.rrule(
     (D̃, Ṽ), inds = truncate(eigh_trunc!, (D, V), alg.fwd_alg.trunc)
     truncerror = truncation_error(diagview(D), inds)
 
-    gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
-
     function eigh_trunc!_full_pullback(ΔDV)
         Δt = eigh_pullback!(
             zeros(storagetype(t), space(t)), t, (D, V), ΔDV, inds;
-            gauge_atol = gtol(ΔDV), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
+            gauge_atol = _get_pullback_gauge_tol(ΔDV, alg.rrule_alg.verbosity), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
         )
         return NoTangent(), Δt, NoTangent()
     end
@@ -336,12 +332,11 @@ function ChainRulesCore.rrule(
         alg::EighAdjoint{F, R}
     ) where {F, R <: TruncPullback}
     D, V, truncerror = eigh_trunc(t, alg)
-    gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
 
     function eigh_trunc!_trunc_pullback(ΔDV)
         Δf = eigh_trunc_pullback!(
             zeros(storagetype(t), space(t)), t, (D, V), ΔDV;
-            gauge_atol = gtol(ΔDV), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
+            gauge_atol = _get_pullback_gauge_tol(ΔDV, alg.rrule_alg.verbosity), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
         )
         return NoTangent(), Δf, NoTangent()
     end

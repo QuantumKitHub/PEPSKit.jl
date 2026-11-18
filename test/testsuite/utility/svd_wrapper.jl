@@ -66,8 +66,7 @@ function utility_svd_wrapper(AT)
 
         @testset "Gauge tolerance inference $T" for T in (Float32, Float64)
             Δ = (svd_compact(adapt(AT, randn(T, ℂ^3, ℂ^4)))..., ZeroTangent())
-            gtol = PEPSKit._get_pullback_gauge_tol(1)
-            @test (@inferred gtol(Δ)) === default_pullback_gauge_atol(Δ)
+            @test (@inferred PEPSKit._get_pullback_gauge_tol(Δ, 1)) === default_pullback_gauge_atol(Δ)
         end
 
         krylov_trunc = truncspace(ℂ^4)

@@ -300,13 +300,11 @@ function ChainRulesCore.rrule(
     result = f === svd_trunc! ?
         (Ũ, S̃, Ṽ⁺, truncation_error(diagview(S), inds)) : (Ũ, S̃, Ṽ⁺)
 
-    gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
-
     function svd_trunc!_full_pullback(ΔUSV′)
         ΔUSV = map(unthunk, ChainRulesCore.backing(ΔUSV′))
         Δt = svd_pullback!(
             zeros(storagetype(t), space(t)), t, (U, S, V⁺), ΔUSV, inds;
-            gauge_atol = gtol(ΔUSV), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
+            gauge_atol = _get_pullback_gauge_tol(ΔUSV, alg.rrule_alg.verbosity), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
         )
         return NoTangent(), Δt, NoTangent()
     end
@@ -319,13 +317,11 @@ end
 
 # Shared reverse pass wrapping MatrixAlgebraKit's svd_trunc_pullback! (also works for IterSVD).
 function _svd_pullback(t, alg::SVDAdjoint{F, <:TruncPullback}, (U, S, V⁺)) where {F}
-    gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
-
     function svd_trunc!_trunc_pullback(ΔUSV′)
         ΔUSV = map(unthunk, ChainRulesCore.backing(ΔUSV′))
         Δf = svd_trunc_pullback!(
             zeros(storagetype(t), space(t)), t, (U, S, V⁺), ΔUSV;
-            gauge_atol = gtol(ΔUSV), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
+            gauge_atol = _get_pullback_gauge_tol(ΔUSV, alg.rrule_alg.verbosity), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
         )
         return NoTangent(), Δf, NoTangent()
     end
