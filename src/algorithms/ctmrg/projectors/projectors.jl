@@ -57,10 +57,15 @@ Return the tensor decomposition algorithm of the `alg` projector algorithm.
 """
 decomposition_algorithm(alg::ProjectorAlgorithm) = alg.decomposition_alg
 
-function truncation_strategy(alg::ProjectorAlgorithm, edge)
+function truncation_strategy(alg::ProjectorAlgorithm, edge, coordinate = nothing)
     if alg.trunc isa FixedSpaceTruncation
         tspace = space(edge, 1)
         return isdual(tspace) ? truncspace(flip(tspace)) : truncspace(tspace)
+    elseif alg.trunc isa SiteDependentTruncation
+        (size(alg.trunc.truncs, 1) == 4 && !isnothing(coordinate)) || throw(
+            ArgumentError("CTMRG supports a `SiteDependentTruncation` of the environment bonds (4 × rows × cols) with `SimultaneousCTMRG` only")
+        )
+        return alg.trunc[coordinate...]
     else
         return alg.trunc
     end

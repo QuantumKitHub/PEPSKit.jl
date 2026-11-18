@@ -9,23 +9,27 @@ struct FixedSpaceTruncation <: TruncationStrategy end
 """
 $(TYPEDEF)
 
-SVD truncation strategy specified for each nearest neighbor bond 
-in `InfinitePEPS`, `InfinitePEPO`:
+SVD truncation strategy specified for each nearest neighbor bond
+in `InfinitePEPS`, `InfinitePEPO` (`2 × rows × cols`):
 - `trunc[1, r, c]` applies to the x-bond between `[r, c]` and `[r, c+1]`.
     If it is a `TruncationSpace`, the space refers to the east domain of
     `[r, c]` or its `flip`, whichever is non-dual.
 - `trunc[2, r, c]` applies to the y-bond between `[r, c]` and `[r-1, c]`.
     If it is a `TruncationSpace`, the space refers to the north domain of
     `[r, c]` or its `flip`, whichever is non-dual.
+
+or for each environment bond of a `CTMRGEnv` (`4 × rows × cols`, `SimultaneousCTMRG` only):
+- `trunc[dir, r, c]` applies to the bond of the first virtual space of `env.edges[dir, r, c]`.
+    If it is a `TruncationSpace`, the space refers to that space or its `flip`,
+    whichever is non-dual.
 """
 struct SiteDependentTruncation{T <: TruncationStrategy} <: TruncationStrategy
     truncs::Array{T, 3}
 
     function SiteDependentTruncation(truncs::Array{T, 3}) where {T}
-        # TODO: generalize it to CTMRGEnv
-        size(truncs, 1) != 2 && throw(
+        size(truncs, 1) in (2, 4) || throw(
             DimensionMismatch(
-                "The first dimension of `truncs` must have a size of 2. Got $(size(truncs, 1))."
+                "The first dimension of `truncs` must have a size of 2 (PEPS bonds) or 4 (environment bonds). Got $(size(truncs, 1))."
             )
         )
         return new{T}(truncs)
