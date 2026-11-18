@@ -364,10 +364,9 @@ function _svd_pullback(
         f, alg::SVDAdjoint{F, R}, (U, S, V⁺)
     ) where {F, R <: Union{GMRES, BiCGStab, Arnoldi}}
     # update rrule_alg tolerance to be compatible with smallest singular value
-    reverse_alg = alg.rrule_alg
     smallest_sval = minimum(((_, b),) -> minimum(diag(b)), blocks(S))
-    proper_tol = clamp(reverse_alg.tol, eps(scalartype(S))^(3 / 4), 1.0e-2 * smallest_sval)
-    rrule_alg = @set reverse_alg.tol = proper_tol
+    proper_tol = clamp(alg.rrule_alg.tol, eps(scalartype(S))^(3 / 4), 1.0e-2 * smallest_sval)
+    rrule_alg = @set $(alg.rrule_alg).tol = proper_tol
 
     function svd_trunc!_itersvd_pullback(ΔUSV⁺′)
         Δf = similar(f)
