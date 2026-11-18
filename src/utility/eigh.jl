@@ -17,8 +17,8 @@ Construct a `FullPullback` algorithm struct from the following keyword arguments
 * `degeneracy_atol::Real=$(Defaults.rrule_degeneracy_atol)` : Absolute tolerance for idendifying degenerate subspaces.
 * `verbosity::Int=0` : Suppresses all output if `≤0`, prints gauge dependency warnings if `1`, and always prints gauge dependency if `≥2`.
 """
-@kwdef struct FullPullback
-    degeneracy_atol::Real = Defaults.rrule_degeneracy_atol
+@kwdef struct FullPullback{T <: Real}
+    degeneracy_atol::T = Defaults.rrule_degeneracy_atol
     verbosity::Int = 0
 end
 
@@ -40,8 +40,8 @@ Construct a `TruncPullback` algorithm struct from the following keyword argument
 * `degeneracy_atol::Real=$(Defaults.rrule_degeneracy_atol)` : Absolute tolerance for idendifying degenerate subspaces.
 * `verbosity::Int=0` : Suppresses all output if `≤0`, prints gauge dependency warnings if `1`, and always prints gauge dependency if `≥2`.
 """
-@kwdef struct TruncPullback
-    degeneracy_atol::Real = Defaults.rrule_degeneracy_atol
+@kwdef struct TruncPullback{T <: Real}
+    degeneracy_atol::T = Defaults.rrule_degeneracy_atol
     verbosity::Int = 0
 end
 
@@ -289,12 +289,14 @@ end
 #
 
 function _get_pullback_gauge_tol(verbosity::Int)
-    if verbosity ≤ 0 # never print gauge sensitivity
-        return (_) -> Inf
-    elseif verbosity == 1 # print gauge sensitivity above default atol
-        MatrixAlgebraKit.default_pullback_gauge_atol
-    else # always print gauge sensitivity
-        return (_) -> 0.0
+    return function (Δ)
+        if verbosity ≤ 0 # never print gauge sensitivity
+            return Inf
+        elseif verbosity == 1 # print gauge sensitivity above default atol
+            return MatrixAlgebraKit.default_pullback_gauge_atol(promote(map(norm, Δ)...))
+        else # always print gauge sensitivity
+            return 0.0
+        end
     end
 end
 
