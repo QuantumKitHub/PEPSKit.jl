@@ -100,8 +100,8 @@ function compute_relative_phases(
 
         # Find right fixed points of mixed transfer matrices
         eigsolve_alg = Arnoldi()
-        ρprev = right_transfermatrix_fixedpoint(Tsprev, M, eigsolve_alg, allocator)
-        ρfinal = right_transfermatrix_fixedpoint(Tsfinal, M, eigsolve_alg, allocator)
+        ρprev = right_transfermatrix_fixedpoint(Tsprev, M, eigsolve_alg; allocator)
+        ρfinal = right_transfermatrix_fixedpoint(Tsfinal, M, eigsolve_alg; allocator)
 
         # Decompose and multiply
         Qprev, = left_orth!(ρprev; positive = true)
@@ -124,8 +124,8 @@ function compute_relative_phases(envfinal::C4vCTMRGEnv{C, T}, envprev::C4vCTMRGE
 
     # Find right fixed points of mixed transfer matrices
     eigsolve_alg = Lanczos() # real eigenvalues
-    ρprev = right_transfermatrix_fixedpoint([Tprev], [M], eigsolve_alg, allocator)
-    ρfinal = right_transfermatrix_fixedpoint([Tfinal], [M], eigsolve_alg, allocator)
+    ρprev = right_transfermatrix_fixedpoint([Tprev], [M], eigsolve_alg; allocator)
+    ρfinal = right_transfermatrix_fixedpoint([Tfinal], [M], eigsolve_alg; allocator)
 
     # Decompose and multiply
     Qprev, = left_orth!(ρprev; positive = true)
@@ -165,7 +165,7 @@ function initialize_right_fixedpoint(tops, bottoms)
 end
 function right_transfermatrix_fixedpoint(
         tops, bottoms, alg = Arnoldi(),
-        ρ0 = initialize_right_fixedpoint(tops, bottoms),
+        ρ0 = initialize_right_fixedpoint(tops, bottoms);
         allocator = default_allocator(ρ0, SerialScheduler())
     )
     _, vecs, info = eigsolve(ρ0, 1, :LM, alg) do ρ

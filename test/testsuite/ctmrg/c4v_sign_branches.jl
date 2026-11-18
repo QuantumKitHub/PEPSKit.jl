@@ -50,7 +50,7 @@ function ctmrg_c4v_sign_branches(AT)
         allocator = PEPSKit.default_allocator(network, SerialScheduler())
         alg = C4vCTMRG(; tol, maxiter, projector_alg = :C4vEighProjector)
 
-        env, info = leading_boundary(initialize_random_c4v_env(peps, Venv), peps, alg)
+        env, info = leading_boundary(initialize_random_c4v_env(peps, Venv), peps, alg; allocator)
         @test info.converged
 
         env_twin = sign_twin(env)
