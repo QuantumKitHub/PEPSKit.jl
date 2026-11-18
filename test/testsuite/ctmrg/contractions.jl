@@ -3,7 +3,7 @@ using Random
 using PEPSKit
 using TensorKit
 using Adapt
-using PEPSKit: eachcoordinate, _next_coordinate, default_allocator, SerialScheduler
+using PEPSKit: eachcoordinate, _next_coordinate, scheduler_allocator, SerialScheduler
 using PEPSKit: EnlargedCorner, HalfInfiniteEnv, FullInfiniteEnv
 using PEPSKit: half_infinite_environment, full_infinite_environment
 using PEPSKit: simultaneous_projectors, contract_projectors
