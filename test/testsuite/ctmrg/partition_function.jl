@@ -136,7 +136,7 @@ function ctmrg_partition_function(AT)
 
             # check observables
             allocator = default_allocator(Z, SerialScheduler())
-            λ = network_value(Z, env, allocator)
+            λ = network_value(Z, env; allocator)
             m = expectation_value(Z, (1, 1) => M, env)
             e = expectation_value(Z, (1, 1) => E, env)
             f_exact, m_exact, e_exact = classical_ising_exact(; beta)

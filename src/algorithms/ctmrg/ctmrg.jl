@@ -158,20 +158,20 @@ function check_input(::typeof(leading_boundary), network, env, alg::CTMRGAlgorit
 
 # custom CTMRG logging
 function ctmrg_loginit!(log, η, network, env, allocator)
-    return @log_initialization loginit!(log, η, network_value(network, env, allocator))
+    return @log_initialization loginit!(log, η, network_value(network, env; allocator))
 end
 function ctmrg_logiter!(log, iter, η, network, env, allocator, lower_bound::Bool = false)
     return @log_iteration _iterlog_message(
-        logiter!(log, iter, η, network_value(network, env, allocator)), lower_bound
+        logiter!(log, iter, η, network_value(network, env; allocator)), lower_bound
     )
 end
 _iterlog_message(log, lower_bound::Bool) =
     lower_bound ? replace(sprint(show, log), "err = " => "err ≥ ") : log
 function ctmrg_logfinish!(log, iter, η, network, env, allocator)
-    return @log_convergence logfinish!(log, iter, η, network_value(network, env, allocator))
+    return @log_convergence logfinish!(log, iter, η, network_value(network, env; allocator))
 end
 function ctmrg_logcancel!(log, iter, η, network, env, allocator)
-    return @log_nonconvergence logcancel!(log, iter, η, network_value(network, env, allocator))
+    return @log_nonconvergence logcancel!(log, iter, η, network_value(network, env; allocator))
 end
 
 @non_differentiable ctmrg_loginit!(args...)
