@@ -285,10 +285,10 @@ end
 ## Reverse-rule algorithms
 #
 
-# svd_trunc! rrule wrapping MatrixAlgebraKit's svd_pullback!
+# Both full-spectrum SVD rules wrap MatrixAlgebraKit's svd_pullback!
 # https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/blob/b76c7bb60014ecfead6925d0df6cb4b8d7c2668a/src/pullbacks/svd.jl#L33
 function ChainRulesCore.rrule(
-        ::typeof(svd_trunc!),
+        f::Union{typeof(svd_trunc!), typeof(svd_trunc_no_error!)},
         t::AbstractTensorMap,
         alg::SVDAdjoint{F, R}
     ) where {F <: TruncatedAlgorithm{<:MatrixAlgebraKit.Algorithm}, R <: FullPullback}
@@ -297,7 +297,8 @@ function ChainRulesCore.rrule(
     # requires access to the full decomposition
     U, S, V⁺ = svd_compact!(t, alg.fwd_alg.alg)
     (Ũ, S̃, Ṽ⁺), inds = truncate(svd_trunc!, (U, S, V⁺), alg.fwd_alg.trunc)
-    truncerror = truncation_error(diagview(S), inds)
+    result = f === svd_trunc! ?
+        (Ũ, S̃, Ṽ⁺, truncation_error(diagview(S), inds)) : (Ũ, S̃, Ṽ⁺)
 
     gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
 
@@ -313,37 +314,7 @@ function ChainRulesCore.rrule(
         return NoTangent(), ZeroTangent(), NoTangent()
     end
 
-    return (Ũ, S̃, Ṽ⁺, truncerror), svd_trunc!_full_pullback
-end
-
-# svd_trunc_no_error! rrule wrapping MatrixAlgebraKit's svd_pullback!
-# https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/blob/b76c7bb60014ecfead6925d0df6cb4b8d7c2668a/src/pullbacks/svd.jl#L33
-function ChainRulesCore.rrule(
-        ::typeof(svd_trunc_no_error!),
-        t::AbstractTensorMap,
-        alg::SVDAdjoint{F, R}
-    ) where {F <: TruncatedAlgorithm{<:MatrixAlgebraKit.Algorithm}, R <: FullPullback}
-    # TODO: filter out any decomposition algorithm that doesn't give access to the full spectrum
-
-    # requires access to the full decomposition
-    U, S, V⁺ = svd_compact!(t, alg.fwd_alg.alg)
-    (Ũ, S̃, Ṽ⁺), inds = truncate(svd_trunc!, (U, S, V⁺), alg.fwd_alg.trunc)
-
-    gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
-
-    function svd_trunc!_full_pullback(ΔUSV′)
-        ΔUSV = unthunk.(ΔUSV′)
-        Δt = svd_pullback!(
-            zeros(storagetype(t), space(t)), t, (U, S, V⁺), ΔUSV, inds;
-            gauge_atol = gtol(ΔUSV), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
-        )
-        return NoTangent(), Δt, NoTangent()
-    end
-    function svd_trunc!_full_pullback(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent})
-        return NoTangent(), ZeroTangent(), NoTangent()
-    end
-
-    return (Ũ, S̃, Ṽ⁺), svd_trunc!_full_pullback
+    return result, svd_trunc!_full_pullback
 end
 
 # Shared reverse pass wrapping MatrixAlgebraKit's svd_trunc_pullback! (also works for IterSVD).

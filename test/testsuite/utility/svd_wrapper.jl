@@ -58,6 +58,14 @@ function utility_svd_wrapper(AT)
             @test g_trunc[1] ≈ g_iter[1] rtol = rtol
         end
 
+        @testset "Full pullback primal $f" for f in (svd_trunc!, svd_trunc_no_error!)
+            alg = @set full_alg.fwd_alg = TruncatedAlgorithm(full_alg.fwd_alg, trunc)
+            result, pullback = rrule(f, copy(r), alg)
+            @test all(isapprox.(result, f(copy(r), alg)))
+            tangent = unthunk(pullback(ntuple(_ -> ZeroTangent(), length(result)))[2])
+            @test tangent isa AbstractZero || iszero(norm(tangent))
+        end
+
         krylov_trunc = truncspace(ℂ^4)
         @testset "SVD reverse rule $reverse, $f" for reverse in (:TruncPullback, :GMRES, :Arnoldi, :BiCGStab), f in (svd_trunc, svd_trunc_no_error)
             alg = SVDAdjoint(; rrule_alg = (; alg = reverse, tol = 1.0e-10))
