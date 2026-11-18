@@ -303,7 +303,7 @@ function ChainRulesCore.rrule(
     gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
 
     function svd_trunc!_full_pullback(ΔUSV′)
-        ΔUSV = unthunk.(ΔUSV′)
+        ΔUSV = map(unthunk, ChainRulesCore.backing(ΔUSV′))
         Δt = svd_pullback!(
             zeros(storagetype(t), space(t)), t, (U, S, V⁺), ΔUSV, inds;
             gauge_atol = gtol(ΔUSV), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
@@ -322,7 +322,7 @@ function _svd_pullback(t, alg::SVDAdjoint{F, <:TruncPullback}, (U, S, V⁺)) whe
     gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
 
     function svd_trunc!_trunc_pullback(ΔUSV′)
-        ΔUSV = unthunk.(ΔUSV′)
+        ΔUSV = map(unthunk, ChainRulesCore.backing(ΔUSV′))
         Δf = svd_trunc_pullback!(
             zeros(storagetype(t), space(t)), t, (U, S, V⁺), ΔUSV;
             gauge_atol = gtol(ΔUSV), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
@@ -372,7 +372,7 @@ function _svd_pullback(f, alg, (U, S, V))
 
     function svd_trunc!_itersvd_pullback(ΔUSVi)
         Δf = similar(f)
-        ΔU, ΔS, ΔV, = unthunk.(ΔUSVi)
+        ΔU, ΔS, ΔV, = map(unthunk, ChainRulesCore.backing(ΔUSVi))
 
         for (c, b) in blocks(Δf)
             Uc, Sc, Vc = block(U, c), block(S, c), block(V, c)

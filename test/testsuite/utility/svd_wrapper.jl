@@ -6,7 +6,7 @@ using ChainRulesCore, Zygote
 using Accessors
 using PEPSKit
 using Adapt
-using MatrixAlgebraKit: TruncatedAlgorithm, diagview, svd_trunc_no_error, svd_trunc_no_error!
+using MatrixAlgebraKit: TruncatedAlgorithm, diagview, svd_trunc_no_error, svd_trunc_no_error!, default_pullback_gauge_atol
 
 function utility_svd_wrapper(AT)
     return @testset "svd_wrapper ($AT)" begin
@@ -62,6 +62,12 @@ function utility_svd_wrapper(AT)
             alg = @set full_alg.fwd_alg = TruncatedAlgorithm(full_alg.fwd_alg, trunc)
             result, _ = rrule(f, copy(r), alg)
             @test all(isapprox.(result, f(copy(r), alg)))
+        end
+
+        @testset "Gauge tolerance inference $T" for T in (Float32, Float64)
+            Δ = (svd_compact(adapt(AT, randn(T, ℂ^3, ℂ^4)))..., ZeroTangent())
+            gtol = PEPSKit._get_pullback_gauge_tol(1)
+            @test (@inferred gtol(Δ)) === default_pullback_gauge_atol(Δ)
         end
 
         krylov_trunc = truncspace(ℂ^4)

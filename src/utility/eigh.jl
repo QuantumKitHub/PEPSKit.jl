@@ -293,7 +293,7 @@ function _get_pullback_gauge_tol(verbosity::Int)
         if verbosity ≤ 0 # never print gauge sensitivity
             return Inf
         elseif verbosity == 1 # print gauge sensitivity above default atol
-            return MatrixAlgebraKit.default_pullback_gauge_atol(Δ)
+            return MatrixAlgebraKit.default_pullback_gauge_atol(promote(map(norm, Δ)...))
         else # always print gauge sensitivity
             return 0.0
         end
