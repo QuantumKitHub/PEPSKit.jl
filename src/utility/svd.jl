@@ -300,11 +300,11 @@ function ChainRulesCore.rrule(
     result = f === svd_trunc! ?
         (Ũ, S̃, Ṽ⁺, truncation_error(diagview(S), inds)) : (Ũ, S̃, Ṽ⁺)
 
-    function svd_trunc!_full_pullback(ΔUSV′)
-        ΔUSV = map(unthunk, ChainRulesCore.backing(ΔUSV′))
+    function svd_trunc!_full_pullback(ΔUSV⁺′)
+        ΔUSV⁺ = map(unthunk, ChainRulesCore.backing(ΔUSV⁺′))
         Δt = svd_pullback!(
-            zeros(storagetype(t), space(t)), t, (U, S, V⁺), ΔUSV, inds;
-            gauge_atol = _get_pullback_gauge_tol(ΔUSV, alg.rrule_alg.verbosity), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
+            zeros(storagetype(t), space(t)), t, (U, S, V⁺), ΔUSV⁺, inds;
+            gauge_atol = _get_pullback_gauge_tol(ΔUSV⁺, alg.rrule_alg.verbosity), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
         )
         return NoTangent(), Δt, NoTangent()
     end
@@ -344,11 +344,11 @@ end
 
 # Shared reverse pass wrapping MatrixAlgebraKit's svd_trunc_pullback! (also works for IterSVD).
 function _svd_pullback(t, alg::SVDAdjoint{F, <:TruncPullback}, (U, S, V⁺)) where {F}
-    function svd_trunc!_trunc_pullback(ΔUSV′)
-        ΔUSV = map(unthunk, ChainRulesCore.backing(ΔUSV′))
+    function svd_trunc!_trunc_pullback(ΔUSV⁺′)
+        ΔUSV⁺ = map(unthunk, ChainRulesCore.backing(ΔUSV⁺′))
         Δf = svd_trunc_pullback!(
-            zeros(storagetype(t), space(t)), t, (U, S, V⁺), ΔUSV;
-            gauge_atol = _get_pullback_gauge_tol(ΔUSV, alg.rrule_alg.verbosity), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
+            zeros(storagetype(t), space(t)), t, (U, S, V⁺), ΔUSV⁺;
+            gauge_atol = _get_pullback_gauge_tol(ΔUSV⁺, alg.rrule_alg.verbosity), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
         )
         return NoTangent(), Δf, NoTangent()
     end
@@ -361,7 +361,7 @@ end
 
 # Shared reverse pass using KrylovKit's adjoint solvers.
 function _svd_pullback(
-        f, alg::SVDAdjoint{F, R}, (U, S, V)
+        f, alg::SVDAdjoint{F, R}, (U, S, V⁺)
     ) where {F, R <: Union{GMRES, BiCGStab, Arnoldi}}
     # update rrule_alg tolerance to be compatible with smallest singular value
     reverse_alg = alg.rrule_alg
@@ -369,30 +369,30 @@ function _svd_pullback(
     proper_tol = clamp(reverse_alg.tol, eps(scalartype(S))^(3 / 4), 1.0e-2 * smallest_sval)
     rrule_alg = @set reverse_alg.tol = proper_tol
 
-    function svd_trunc!_itersvd_pullback(ΔUSVi)
+    function svd_trunc!_itersvd_pullback(ΔUSV⁺′)
         Δf = similar(f)
-        ΔU, ΔS, ΔV, = map(unthunk, ChainRulesCore.backing(ΔUSVi))
+        ΔU, ΔS, ΔV⁺, = map(unthunk, ChainRulesCore.backing(ΔUSV⁺′))
 
         for (c, b) in blocks(Δf)
-            Uc, Sc, Vc = block(U, c), block(S, c), block(V, c)
-            ΔUc, ΔSc, ΔVc = block(ΔU, c), block(ΔS, c), block(ΔV, c)
+            Uc, Sc, V⁺c = block(U, c), block(S, c), block(V⁺, c)
+            ΔUc, ΔSc, ΔV⁺c = block(ΔU, c), block(ΔS, c), block(ΔV⁺, c)
             Sdc = _indexable_diagview(Sc)
             ΔSdc = ΔSc isa AbstractZero ? zero(Sdc) : _indexable_diagview(ΔSc)
 
             n_vals = length(Sdc)
             lvecs = _column_vectors(storagetype(f), Uc)
-            rvecs = _column_vectors(storagetype(f), Vc')
+            rvecs = _column_vectors(storagetype(f), V⁺c')
 
             # Dummy objects only used for warnings
             minimal_info = KrylovKit.ConvergenceInfo(n_vals, nothing, nothing, -1, -1)  # Only num. converged is used
             minimal_alg = GKL(; tol = rrule_alg.tol, verbosity = 1)  # Tolerance is used for gauge sensitivity, verbosity is used for warnings
 
-            if ΔUc isa AbstractZero && ΔVc isa AbstractZero  # Handle ZeroTangent singular vectors
+            if ΔUc isa AbstractZero && ΔV⁺c isa AbstractZero  # Handle ZeroTangent singular vectors
                 Δlvecs = fill(ZeroTangent(), n_vals)
                 Δrvecs = fill(ZeroTangent(), n_vals)
             else
                 Δlvecs = _column_vectors(storagetype(f), ΔUc)
-                Δrvecs = _column_vectors(storagetype(f), ΔVc')
+                Δrvecs = _column_vectors(storagetype(f), ΔV⁺c')
             end
 
             xs, ys = KrylovKitCRCExt.compute_svdsolve_pullback_data(
