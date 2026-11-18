@@ -90,8 +90,8 @@ The supported keywords are:
     - `:Arnoldi` : Arnoldi Krylov algorithm, see [`KrylovKit.Arnoldi`](@extref) for details
     - `:GeomSum` : Geometric sum approximation of the Neumann series of the inverse Jacobian, see [`PEPSKit.GeomSum`](@ref) for details
     - `:ManualIter` : Manual fixed-point iteration, see [`PEPSKit.ManualIter`](@ref) for details
-    - `:AndersonMixing` : Anderson-accelerated fixed-point iteration, see `OptimKit.AndersonMixing` for details
-    - `:SimpleIteration` : Plain fixed-point iteration, see `OptimKit.SimpleIteration` for details
+    - `:AndersonMixing` : Anderson-accelerated fixed-point iteration, see [`OptimKit.AndersonMixing`](@extref) for details
+    - `:SimpleIteration` : Plain fixed-point iteration, see [`OptimKit.SimpleIteration`](@extref) for details
 
 See also [`fixedpoint_gradient`](@ref) for details on the underlying procedure.
 """
