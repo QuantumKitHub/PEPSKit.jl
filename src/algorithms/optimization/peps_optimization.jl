@@ -293,10 +293,9 @@ function fixedpoint(
             g_global = tracked_finalizer.tol_state.gradnorm
         )
         # gradient tolerance is scaled relative to the boundary algorithm's own
-        # (just-updated) effective tolerance, not directly to the gradient norm
-        gradient_alg = adapt_solver(
-            alg.gradient_alg; iter = tracked_finalizer.tol_state.iter, g_global = boundary_alg.tol
-        )
+        # (just-updated) effective tolerance, not directly to the gradient norm; that tolerance
+        # already decays with the iteration, so `iter` is not passed a second time
+        gradient_alg = adapt_solver(alg.gradient_alg; g_global = boundary_alg.tol)
         E, gs = withgradient(peps) do ψ
             env′, info = hook_pullback(
                 leading_boundary, env, ψ, boundary_alg;
