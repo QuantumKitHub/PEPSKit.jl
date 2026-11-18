@@ -52,7 +52,7 @@ function ctmrg_suweight(AT)
             if init == :trivial
                 @test ρ1 ≈ su_rdm_1x1(r, c, peps, nothing)
             end
-            ρ2 = reduced_densitymatrix([idx], peps, env, allocator)
+            ρ2 = reduced_densitymatrix([idx], peps, env; allocator)
             @test ρ1 ≈ ρ2
         end
     end
