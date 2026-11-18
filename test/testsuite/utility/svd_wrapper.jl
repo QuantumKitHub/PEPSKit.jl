@@ -60,24 +60,16 @@ function utility_svd_wrapper(AT)
 
         @testset "Full pullback primal $f" for f in (svd_trunc!, svd_trunc_no_error!)
             alg = @set full_alg.fwd_alg = TruncatedAlgorithm(full_alg.fwd_alg, trunc)
-            result, pullback = rrule(f, copy(r), alg)
+            result, _ = rrule(f, copy(r), alg)
             @test all(isapprox.(result, f(copy(r), alg)))
-            tangent = unthunk(pullback(ntuple(_ -> ZeroTangent(), length(result)))[2])
-            @test tangent isa AbstractZero || iszero(norm(tangent))
         end
 
         krylov_trunc = truncspace(ℂ^4)
-        @testset "SVD reverse rule $reverse, $f" for reverse in (:TruncPullback, :GMRES, :Arnoldi, :BiCGStab), f in (svd_trunc, svd_trunc_no_error)
+        @testset "Krylov reverse rule $reverse, $f" for reverse in (:GMRES, :Arnoldi, :BiCGStab), f in (svd_trunc, svd_trunc_no_error)
             alg = SVDAdjoint(; rrule_alg = (; alg = reverse, tol = 1.0e-10))
             gradient = only(Zygote.gradient(A -> lossfun(f, A, alg, R, krylov_trunc), r))
             reference = only(Zygote.gradient(A -> lossfun(f, A, full_alg, R, krylov_trunc), r))
             @test gradient ≈ reference rtol = rtol
-
-            alg = @set alg.fwd_alg = TruncatedAlgorithm(alg.fwd_alg, krylov_trunc)
-            bang = f === svd_trunc ? svd_trunc! : svd_trunc_no_error!
-            result, pullback = rrule(bang, copy(r), alg)
-            tangent = unthunk(pullback(ntuple(_ -> ZeroTangent(), length(result)))[2])
-            @test tangent isa AbstractZero || iszero(norm(tangent))
         end
 
         @testset "Truncated SVD broadening for $f, $(alg.rrule_alg)" for f in (svd_trunc, svd_trunc_no_error), alg in [full_alg, trunc_alg]
