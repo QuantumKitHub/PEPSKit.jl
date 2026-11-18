@@ -97,14 +97,14 @@ function MPSKit.expectation_value(
         pf::InfinitePartitionFunction,
         op::Pair{CartesianIndex{2}, <:AbstractTensorMap{T, S, 2, 2}},
         env;
-        allocator = default_allocator(pf, SerialScheduler())
+        allocator = scheduler_allocator(pf)
     ) where {T, S}
     return contract_local_tensor(op[1], op[2], env, allocator) /
         contract_local_tensor(op[1], pf[op[1]], env, allocator)
 end
 function MPSKit.expectation_value(
         pf::InfinitePartitionFunction, op::Pair{Tuple{Int, Int}}, env;
-        allocator = default_allocator(pf, SerialScheduler())
+        allocator = scheduler_allocator(pf)
     )
     return expectation_value(pf, CartesianIndex(op[1]) => op[2], env; allocator)
 end
