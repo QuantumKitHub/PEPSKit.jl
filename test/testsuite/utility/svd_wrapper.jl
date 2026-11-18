@@ -6,7 +6,7 @@ using ChainRulesCore, Zygote
 using Accessors
 using PEPSKit
 using Adapt
-using MatrixAlgebraKit: TruncatedAlgorithm, diagview, svd_trunc_no_error
+using MatrixAlgebraKit: TruncatedAlgorithm, diagview, svd_trunc_no_error, svd_trunc_no_error!, default_pullback_gauge_atol
 
 function utility_svd_wrapper(AT)
     return @testset "svd_wrapper ($AT)" begin
@@ -56,6 +56,25 @@ function utility_svd_wrapper(AT)
             @test g_full[1] ≈ g_trunc[1] rtol = rtol
             @test g_full[1] ≈ g_iter[1] rtol = rtol
             @test g_trunc[1] ≈ g_iter[1] rtol = rtol
+        end
+
+        @testset "Full pullback primal $f" for f in (svd_trunc!, svd_trunc_no_error!)
+            alg = @set full_alg.fwd_alg = TruncatedAlgorithm(full_alg.fwd_alg, trunc)
+            result, _ = rrule(f, copy(r), alg)
+            @test all(isapprox.(result, f(copy(r), alg)))
+        end
+
+        @testset "Gauge tolerance inference $T" for T in (Float32, Float64)
+            Δ = (svd_compact(adapt(AT, randn(T, ℂ^3, ℂ^4)))..., ZeroTangent())
+            @test (@inferred PEPSKit._get_pullback_gauge_tol(Δ, 1)) === default_pullback_gauge_atol(Δ)
+        end
+
+        krylov_trunc = truncspace(ℂ^4)
+        @testset "Krylov reverse rule $reverse, $f" for reverse in (:GMRES, :Arnoldi, :BiCGStab), f in (svd_trunc, svd_trunc_no_error)
+            alg = SVDAdjoint(; rrule_alg = (; alg = reverse, tol = 1.0e-10))
+            gradient = only(Zygote.gradient(A -> lossfun(f, A, alg, R, krylov_trunc), r))
+            reference = only(Zygote.gradient(A -> lossfun(f, A, full_alg, R, krylov_trunc), r))
+            @test gradient ≈ reference rtol = rtol
         end
 
         @testset "Truncated SVD broadening for $f, $(alg.rrule_alg)" for f in (svd_trunc, svd_trunc_no_error), alg in [full_alg, trunc_alg]
