@@ -365,10 +365,10 @@ end
 
 function _svd_pullback(f, alg, (U, S, V))
     # update rrule_alg tolerance to be compatible with smallest singular value
-    rrule_alg = alg.rrule_alg
+    reverse_alg = alg.rrule_alg
     smallest_sval = minimum(((_, b),) -> minimum(diag(b)), blocks(S))
-    proper_tol = clamp(rrule_alg.tol, eps(scalartype(S))^(3 / 4), 1.0e-2 * smallest_sval)
-    rrule_alg = @set rrule_alg.tol = proper_tol
+    proper_tol = clamp(reverse_alg.tol, eps(scalartype(S))^(3 / 4), 1.0e-2 * smallest_sval)
+    rrule_alg = @set reverse_alg.tol = proper_tol
 
     function svd_trunc!_itersvd_pullback(ΔUSVi)
         Δf = similar(f)
