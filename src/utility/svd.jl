@@ -315,23 +315,6 @@ function ChainRulesCore.rrule(
     return result, svd_trunc!_full_pullback
 end
 
-# Shared reverse pass wrapping MatrixAlgebraKit's svd_trunc_pullback! (also works for IterSVD).
-function _svd_pullback(t, alg::SVDAdjoint{F, <:TruncPullback}, (U, S, V⁺)) where {F}
-    function svd_trunc!_trunc_pullback(ΔUSV′)
-        ΔUSV = map(unthunk, ChainRulesCore.backing(ΔUSV′))
-        Δf = svd_trunc_pullback!(
-            zeros(storagetype(t), space(t)), t, (U, S, V⁺), ΔUSV;
-            gauge_atol = _get_pullback_gauge_tol(ΔUSV, alg.rrule_alg.verbosity), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
-        )
-        return NoTangent(), Δf, NoTangent()
-    end
-    function svd_trunc!_trunc_pullback(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent})
-        return NoTangent(), ZeroTangent(), NoTangent()
-    end
-
-    return svd_trunc!_trunc_pullback
-end
-
 # `block(::AdjointTensorMap, c)` hands back a `LinearAlgebra.Adjoint`
 # Some backends will need to materialize this to avoid scalar indexing
 _materialize_block(m::AbstractMatrix) = m
@@ -359,7 +342,27 @@ function ChainRulesCore.rrule(
     return result, _svd_pullback(f, alg, result)
 end
 
-function _svd_pullback(f, alg, (U, S, V))
+# Shared reverse pass wrapping MatrixAlgebraKit's svd_trunc_pullback! (also works for IterSVD).
+function _svd_pullback(t, alg::SVDAdjoint{F, <:TruncPullback}, (U, S, V⁺)) where {F}
+    function svd_trunc!_trunc_pullback(ΔUSV′)
+        ΔUSV = map(unthunk, ChainRulesCore.backing(ΔUSV′))
+        Δf = svd_trunc_pullback!(
+            zeros(storagetype(t), space(t)), t, (U, S, V⁺), ΔUSV;
+            gauge_atol = _get_pullback_gauge_tol(ΔUSV, alg.rrule_alg.verbosity), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
+        )
+        return NoTangent(), Δf, NoTangent()
+    end
+    function svd_trunc!_trunc_pullback(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent})
+        return NoTangent(), ZeroTangent(), NoTangent()
+    end
+
+    return svd_trunc!_trunc_pullback
+end
+
+# Shared reverse pass using KrylovKit's adjoint solvers.
+function _svd_pullback(
+        f, alg::SVDAdjoint{F, R}, (U, S, V)
+    ) where {F, R <: Union{GMRES, BiCGStab, Arnoldi}}
     # update rrule_alg tolerance to be compatible with smallest singular value
     reverse_alg = alg.rrule_alg
     smallest_sval = minimum(((_, b),) -> minimum(diag(b)), blocks(S))
