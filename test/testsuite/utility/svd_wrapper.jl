@@ -59,7 +59,7 @@ function utility_svd_wrapper(AT)
         end
 
         krylov_trunc = truncspace(ℂ^4)
-        @testset "Krylov reverse rule $reverse, $f" for reverse in (:GMRES, :Arnoldi, :BiCGStab), f in (svd_trunc, svd_trunc_no_error)
+        @testset "SVD reverse rule $reverse, $f" for reverse in (:TruncPullback, :GMRES, :Arnoldi, :BiCGStab), f in (svd_trunc, svd_trunc_no_error)
             alg = SVDAdjoint(; rrule_alg = (; alg = reverse, tol = 1.0e-10))
             gradient = only(Zygote.gradient(A -> lossfun(f, A, alg, R, krylov_trunc), r))
             reference = only(Zygote.gradient(A -> lossfun(f, A, full_alg, R, krylov_trunc), r))

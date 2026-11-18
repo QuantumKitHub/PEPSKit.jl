@@ -346,14 +346,8 @@ function ChainRulesCore.rrule(
     return (Ũ, S̃, Ṽ⁺), svd_trunc!_full_pullback
 end
 
-# svd_trunc! rrule wrapping MatrixAlgebraKit's svd_trunc_pullback! (also works for IterSVD)
-# https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/blob/b76c7bb60014ecfead6925d0df6cb4b8d7c2668a/src/pullbacks/svd.jl#L143
-function ChainRulesCore.rrule(
-        ::typeof(svd_trunc!),
-        t,
-        alg::SVDAdjoint{F, R},
-    ) where {F, R <: TruncPullback}
-    U, S, V⁺, ϵ = svd_trunc(t, alg)
+# Shared reverse pass wrapping MatrixAlgebraKit's svd_trunc_pullback! (also works for IterSVD).
+function _svd_pullback(t, alg::SVDAdjoint{F, <:TruncPullback}, (U, S, V⁺)) where {F}
     gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
 
     function svd_trunc!_trunc_pullback(ΔUSV′)
@@ -368,32 +362,7 @@ function ChainRulesCore.rrule(
         return NoTangent(), ZeroTangent(), NoTangent()
     end
 
-    return (U, S, V⁺, ϵ), svd_trunc!_trunc_pullback
-end
-
-# svd_trunc_no_error! rrule wrapping MatrixAlgebraKit's svd_trunc_pullback! (also works for IterSVD)
-# https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/blob/b76c7bb60014ecfead6925d0df6cb4b8d7c2668a/src/pullbacks/svd.jl#L143
-function ChainRulesCore.rrule(
-        ::typeof(svd_trunc_no_error!),
-        t,
-        alg::SVDAdjoint{F, R},
-    ) where {F, R <: TruncPullback}
-    U, S, V⁺ = svd_trunc_no_error(t, alg)
-    gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
-
-    function svd_trunc!_trunc_pullback(ΔUSV′)
-        ΔUSV = unthunk.(ΔUSV′)
-        Δf = svd_trunc_pullback!(
-            zeros(storagetype(t), space(t)), t, (U, S, V⁺), ΔUSV;
-            gauge_atol = gtol(ΔUSV), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
-        )
-        return NoTangent(), Δf, NoTangent()
-    end
-    function svd_trunc!_trunc_pullback(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent})
-        return NoTangent(), ZeroTangent(), NoTangent()
-    end
-
-    return (U, S, V⁺), svd_trunc!_trunc_pullback
+    return svd_trunc!_trunc_pullback
 end
 
 # `block(::AdjointTensorMap, c)` hands back a `LinearAlgebra.Adjoint`
@@ -409,16 +378,16 @@ end
 # Some backends will need to copy this to the host to avoid scalar indexing
 _indexable_diagview(m::AbstractMatrix) = diagview(m)
 
-# KrylovKit rrules share their reverse pass while keeping separate forward APIs.
+# SVD rrules share their reverse pass while keeping separate forward APIs.
 function ChainRulesCore.rrule(
         ::typeof(svd_trunc!), f, alg::SVDAdjoint{F, R}
-    ) where {F, R <: Union{GMRES, BiCGStab, Arnoldi}}
+    ) where {F, R <: Union{TruncPullback, GMRES, BiCGStab, Arnoldi}}
     result = svd_trunc(f, alg)
     return result, _svd_pullback(f, alg, result[1:3])
 end
 function ChainRulesCore.rrule(
         ::typeof(svd_trunc_no_error!), f, alg::SVDAdjoint{F, R}
-    ) where {F, R <: Union{GMRES, BiCGStab, Arnoldi}}
+    ) where {F, R <: Union{TruncPullback, GMRES, BiCGStab, Arnoldi}}
     result = svd_trunc_no_error(f, alg)
     return result, _svd_pullback(f, alg, result)
 end
