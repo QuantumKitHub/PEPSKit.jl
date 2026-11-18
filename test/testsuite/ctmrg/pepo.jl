@@ -143,8 +143,8 @@ function ctmrg_pepo_fixed_point(AT)
                     PEPSKit.update!(env2, env2′)
                     PEPSKit.update!(env3, env3′)
                 end
-                λ3 = network_value(n3, env3, allocator)
-                λ2 = network_value(n2, env2, allocator)
+                λ3 = network_value(n3, env3; allocator)
+                λ2 = network_value(n2, env2; allocator)
                 return -log(real(λ3 / λ2))
             end
             g = only(gs)

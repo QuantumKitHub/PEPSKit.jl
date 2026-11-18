@@ -101,7 +101,7 @@ function boundary_mps_fermionic_peps(AT)
         rng = StableRNG(29384293742893)
         ctm´, = leading_boundary(CTMRGEnv((args...) -> randn(rng, args...), ComplexF64, n´, χ), n´)
         allocator = default_allocator(n´, SerialScheduler())
-        N_ctm´ = abs(network_value(n´, ctm´, allocator))
+        N_ctm´ = abs(network_value(n´, ctm´; allocator))
 
         @show N_vumps´
         @test N_vumps´ ≈ N_vumps rtol = 1.0e-2

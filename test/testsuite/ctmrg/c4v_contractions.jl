@@ -43,7 +43,7 @@ function test_c4v_contractions(n::InfiniteSquareNetwork, env::C4vCTMRGEnv)
         @test _contract_corners(ind, env, allocator) ≈ _contract_corners(ind, env_ref, allocator)
         @test _contract_vertical_edges(ind, env, allocator) ≈ _contract_vertical_edges(ind, env_ref, allocator)
         @test _contract_horizontal_edges(ind, env, allocator) ≈ _contract_horizontal_edges(ind, env_ref, allocator)
-        @test network_value(n, env, allocator) ≈ network_value(n, env_ref, allocator)
+        @test network_value(n, env; allocator) ≈ network_value(n, env_ref; allocator)
         @test_throws AssertionError _contract_site((1, 2), n, env, allocator)
     end
 
@@ -59,14 +59,14 @@ function test_c4v_contractions(n::InfiniteSquareNetwork, env::C4vCTMRGEnv)
     end
 
     @testset "Rotations" begin
-        nv = network_value(n, env, allocator)
+        nv = network_value(n, env; allocator)
         for rot in (rotl90, rotr90, rot180)
             env_rot = rot(env)
             env_ref_rot = rot(env_ref)
             @test env_rot isa C4vCTMRGEnv
             @test size(env_rot.edges) == (4, 1, 1)
             @test all(env_rot.edges .≈ env_ref_rot.edges)
-            @test network_value(rot(n), env_rot, allocator) ≈ nv
+            @test network_value(rot(n), env_rot; allocator) ≈ nv
         end
         @test rotl90(rotr90(env)) ≈ env
         @test rot180(rot180(env)) ≈ env
