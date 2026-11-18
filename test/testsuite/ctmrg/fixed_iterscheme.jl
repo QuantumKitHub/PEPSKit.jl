@@ -9,7 +9,7 @@ using PEPSKit
 using PEPSKit:
     ctmrg_iteration,
     compute_gauge_fix_gauge,
-    default_allocator,
+    scheduler_allocator,
     fix_phases,
     fix_relative_phases,
     calc_elementwise_convergence,
