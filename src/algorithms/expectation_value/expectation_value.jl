@@ -51,11 +51,11 @@ function local_expectation_value end
 
 # AbstractTensorMap evaluation goes through reduced density matrix
 function local_expectation_value(inds, bra, operator::AbstractTensorMap, ket, env, allocator)
-    ρ = reduced_densitymatrix(inds, ket, bra, env, allocator)
+    ρ = reduced_densitymatrix(inds, ket, bra, env; allocator)
     return trmul(operator, ρ)
 end
 function local_expectation_value(inds, state, operator::AbstractTensorMap, env, allocator)
-    ρ = reduced_densitymatrix(inds, state, env, allocator)
+    ρ = reduced_densitymatrix(inds, state, env; allocator)
     return trmul(operator, ρ)
 end
 
