@@ -123,19 +123,19 @@ function toolbox_densitymatrix_generic_fallback(AT)
         # to `_contract_densitymatrix`, which should agree with the specializations that
         # do exist
         for ind in CartesianIndices((2, 2))
-            ρ_fast = reduced_densitymatrix([ind], peps, env, allocator)
+            ρ_fast = reduced_densitymatrix([ind], peps, env; allocator)
             ρ_generic = invoke(
                 PEPSKit.reduced_densitymatrix1x1, Tuple{Any, Any, Any, Any, Any}, ind, peps, peps, env, allocator,
             )
             @test ρ_fast ≈ ρ_generic
 
-            ρ_fast = reduced_densitymatrix([ind, ind + CartesianIndex(1, 0)], peps, env, allocator)
+            ρ_fast = reduced_densitymatrix([ind, ind + CartesianIndex(1, 0)], peps, env; allocator)
             ρ_generic = invoke(
                 PEPSKit.reduced_densitymatrix2x1, Tuple{Any, Any, Any, Any, Any}, ind, peps, peps, env, allocator,
             )
             @test ρ_fast ≈ ρ_generic
 
-            ρ_fast = reduced_densitymatrix([ind, ind + CartesianIndex(0, 1)], peps, env, allocator)
+            ρ_fast = reduced_densitymatrix([ind, ind + CartesianIndex(0, 1)], peps, env; allocator)
             ρ_generic = invoke(
                 PEPSKit.reduced_densitymatrix1x2, Tuple{Any, Any, Any, Any, Any}, ind, peps, peps, env, allocator,
             )
