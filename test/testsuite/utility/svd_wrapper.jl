@@ -77,6 +77,17 @@ function utility_svd_wrapper(AT)
             @test gradient ≈ reference rtol = rtol
         end
 
+        @testset "Thunked cotangents $reverse, $f" for reverse in (:FullPullback, :TruncPullback, :GMRES, :Arnoldi, :BiCGStab), f in (svd_trunc!, svd_trunc_no_error!)
+            alg = SVDAdjoint(; rrule_alg = (; alg = reverse))
+            alg = @set alg.fwd_alg = TruncatedAlgorithm(alg.fwd_alg, krylov_trunc)
+            result, pb = @inferred rrule(f, copy(r), alg)
+            cot = (ZeroTangent(), 2result[2], ZeroTangent())
+            reference = (@inferred pb(cot))[2]
+            wrapped = Tangent{Any}(map(x -> Thunk(() -> x), cot)...)
+            @test (@inferred pb(Thunk(() -> cot)))[2] ≈ reference rtol = rtol
+            @test (@inferred pb(Thunk(() -> wrapped)))[2] ≈ reference rtol = rtol
+        end
+
         @testset "Truncated SVD broadening for $f, $(alg.rrule_alg)" for f in (svd_trunc, svd_trunc_no_error), alg in [full_alg, trunc_alg]
             u, s, v, = svd_compact(r)
             s.data[1:2:m] .= s.data[2:2:m] # make every singular value two-fold degenerate
