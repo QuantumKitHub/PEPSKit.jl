@@ -244,14 +244,14 @@ function _create_svdtensors(t::TensorMap, SVDdata, dims)
     Σ = DiagonalTensorMap{Tr, S, A}(undef, W)
 
     U = similar(t, codomain(t) ← W)
-    V⁺ = similar(t, W ← domain(t))
-    for (c, (Uc, Σc, V⁺c)) in SVDdata
+    Vᴴ = similar(t, W ← domain(t))
+    for (c, (Uc, Σc, Vᴴc)) in SVDdata
         r = Base.OneTo(dims[c])
         copy!(block(U, c), view(Uc, :, r))
         copy!(block(Σ, c), Diagonal(view(Σc, r)))
-        copy!(block(V⁺, c), view(V⁺c, r, :))
+        copy!(block(Vᴴ, c), view(Vᴴc, r, :))
     end
-    return U, Σ, V⁺
+    return U, Σ, Vᴴ
 end
 
 # Interface between KrylovKit's svdsolve and TensorMap data
@@ -331,24 +331,23 @@ end
 # svd_trunc! rrule wrapping MatrixAlgebraKit's svd_pullback!
 # https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/blob/b76c7bb60014ecfead6925d0df6cb4b8d7c2668a/src/pullbacks/svd.jl#L33
 function ChainRulesCore.rrule(
-        ::typeof(svd_trunc!),
+        f::Union{typeof(svd_trunc!), typeof(svd_trunc_no_error!)},
         t::AbstractTensorMap,
         alg::SVDAdjoint{F, R}
     ) where {F <: TruncatedAlgorithm{<:MatrixAlgebraKit.Algorithm}, R <: FullPullback}
     # TODO: filter out any decomposition algorithm that doesn't give access to the full spectrum
 
     # requires access to the full decomposition
-    U, S, V⁺ = svd_compact!(t, alg.fwd_alg.alg)
-    (Ũ, S̃, Ṽ⁺), inds = truncate(svd_trunc!, (U, S, V⁺), alg.fwd_alg.trunc)
-    truncerror = truncation_error(diagview(S), inds)
+    U, S, Vᴴ = svd_compact!(t, alg.fwd_alg.alg)
+    (Ũ, S̃, Ṽᴴ), inds = truncate(svd_trunc!, (U, S, Vᴴ), alg.fwd_alg.trunc)
+    result = f === svd_trunc! ?
+        (Ũ, S̃, Ṽᴴ, truncation_error(diagview(S), inds)) : (Ũ, S̃, Ṽᴴ)
 
-    gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
-
-    function svd_trunc!_full_pullback(ΔUSV′)
-        ΔUSV = unthunk.(ΔUSV′)
+    function svd_trunc!_full_pullback(ΔUSVᴴ′)
+        ΔUSVᴴ = map(unthunk, ChainRulesCore.backing(ΔUSVᴴ′))
         Δt = svd_pullback!(
-            zeros(storagetype(t), space(t)), t, (U, S, V⁺), ΔUSV, inds;
-            gauge_atol = gtol(ΔUSV), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
+            zeros(storagetype(t), space(t)), t, (U, S, Vᴴ), ΔUSVᴴ, inds;
+            gauge_atol = _get_pullback_gauge_tol(ΔUSVᴴ, alg.rrule_alg.verbosity), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
         )
         return NoTangent(), Δt, NoTangent()
     end
@@ -356,87 +355,7 @@ function ChainRulesCore.rrule(
         return NoTangent(), ZeroTangent(), NoTangent()
     end
 
-    return (Ũ, S̃, Ṽ⁺, truncerror), svd_trunc!_full_pullback
-end
-
-# svd_trunc_no_error! rrule wrapping MatrixAlgebraKit's svd_pullback!
-# https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/blob/b76c7bb60014ecfead6925d0df6cb4b8d7c2668a/src/pullbacks/svd.jl#L33
-function ChainRulesCore.rrule(
-        ::typeof(svd_trunc_no_error!),
-        t::AbstractTensorMap,
-        alg::SVDAdjoint{F, R}
-    ) where {F <: TruncatedAlgorithm{<:MatrixAlgebraKit.Algorithm}, R <: FullPullback}
-    # TODO: filter out any decomposition algorithm that doesn't give access to the full spectrum
-
-    # requires access to the full decomposition
-    U, S, V⁺ = svd_compact!(t, alg.fwd_alg.alg)
-    (Ũ, S̃, Ṽ⁺), inds = truncate(svd_trunc!, (U, S, V⁺), alg.fwd_alg.trunc)
-
-    gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
-
-    function svd_trunc!_full_pullback(ΔUSV′)
-        ΔUSV = unthunk.(ΔUSV′)
-        Δt = svd_pullback!(
-            zeros(storagetype(t), space(t)), t, (U, S, V⁺), ΔUSV, inds;
-            gauge_atol = gtol(ΔUSV), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
-        )
-        return NoTangent(), Δt, NoTangent()
-    end
-    function svd_trunc!_full_pullback(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent})
-        return NoTangent(), ZeroTangent(), NoTangent()
-    end
-
-    return (Ũ, S̃, Ṽ⁺), svd_trunc!_full_pullback
-end
-
-# svd_trunc! rrule wrapping MatrixAlgebraKit's svd_trunc_pullback! (also works for IterSVD)
-# https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/blob/b76c7bb60014ecfead6925d0df6cb4b8d7c2668a/src/pullbacks/svd.jl#L143
-function ChainRulesCore.rrule(
-        ::typeof(svd_trunc!),
-        t,
-        alg::SVDAdjoint{F, R},
-    ) where {F, R <: TruncPullback}
-    U, S, V⁺, ϵ = svd_trunc(t, alg)
-    gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
-
-    function svd_trunc!_trunc_pullback(ΔUSV′)
-        ΔUSV = unthunk.(ΔUSV′)
-        Δf = svd_trunc_pullback!(
-            zeros(storagetype(t), space(t)), t, (U, S, V⁺), ΔUSV;
-            gauge_atol = gtol(ΔUSV), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
-        )
-        return NoTangent(), Δf, NoTangent()
-    end
-    function svd_trunc!_trunc_pullback(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent})
-        return NoTangent(), ZeroTangent(), NoTangent()
-    end
-
-    return (U, S, V⁺, ϵ), svd_trunc!_trunc_pullback
-end
-
-# svd_trunc_no_error! rrule wrapping MatrixAlgebraKit's svd_trunc_pullback! (also works for IterSVD)
-# https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/blob/b76c7bb60014ecfead6925d0df6cb4b8d7c2668a/src/pullbacks/svd.jl#L143
-function ChainRulesCore.rrule(
-        ::typeof(svd_trunc_no_error!),
-        t,
-        alg::SVDAdjoint{F, R},
-    ) where {F, R <: TruncPullback}
-    U, S, V⁺ = svd_trunc_no_error(t, alg)
-    gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
-
-    function svd_trunc!_trunc_pullback(ΔUSV′)
-        ΔUSV = unthunk.(ΔUSV′)
-        Δf = svd_trunc_pullback!(
-            zeros(storagetype(t), space(t)), t, (U, S, V⁺), ΔUSV;
-            gauge_atol = gtol(ΔUSV), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
-        )
-        return NoTangent(), Δf, NoTangent()
-    end
-    function svd_trunc!_trunc_pullback(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent})
-        return NoTangent(), ZeroTangent(), NoTangent()
-    end
-
-    return (U, S, V⁺), svd_trunc!_trunc_pullback
+    return result, svd_trunc!_full_pullback
 end
 
 # `block(::AdjointTensorMap, c)` hands back a `LinearAlgebra.Adjoint`
@@ -452,114 +371,70 @@ end
 # Some backends will need to copy this to the host to avoid scalar indexing
 _indexable_diagview(m::AbstractMatrix) = diagview(m)
 
-# KrylovKit rrule compatible with TensorMaps & function handles
+# SVD rrules share their reverse pass while keeping separate forward APIs.
 function ChainRulesCore.rrule(
-        ::typeof(svd_trunc!),
-        f,
-        alg::SVDAdjoint{F, R}
-    ) where {F, R <: Union{GMRES, BiCGStab, Arnoldi}}
-    U, S, V, ϵ = svd_trunc(f, alg)
-
-    # update rrule_alg tolerance to be compatible with smallest singular value
-    rrule_alg = alg.rrule_alg
-    smallest_sval = minimum(((_, b),) -> minimum(diag(b)), blocks(S))
-    proper_tol = clamp(rrule_alg.tol, eps(scalartype(S))^(3 / 4), 1.0e-2 * smallest_sval)
-    rrule_alg = @set rrule_alg.tol = proper_tol
-
-    function svd_trunc!_itersvd_pullback(ΔUSVi)
-        Δf = similar(f)
-        ΔU, ΔS, ΔV, = unthunk.(ΔUSVi)
-
-        for (c, b) in blocks(Δf)
-            Uc, Sc, Vc = block(U, c), block(S, c), block(V, c)
-            ΔUc, ΔSc, ΔVc = block(ΔU, c), block(ΔS, c), block(ΔV, c)
-            Sdc = _indexable_diagview(Sc)
-            ΔSdc = ΔSc isa AbstractZero ? zero(Sdc) : _indexable_diagview(ΔSc)
-
-            n_vals = length(Sdc)
-            lvecs = _column_vectors(storagetype(f), Uc)
-            rvecs = _column_vectors(storagetype(f), Vc')
-
-            # Dummy objects only used for warnings
-            minimal_info = KrylovKit.ConvergenceInfo(n_vals, nothing, nothing, -1, -1)  # Only num. converged is used
-            minimal_alg = GKL(; tol = rrule_alg.tol, verbosity = 1)  # Tolerance is used for gauge sensitivity, verbosity is used for warnings
-
-            if ΔUc isa AbstractZero && ΔVc isa AbstractZero  # Handle ZeroTangent singular vectors
-                Δlvecs = fill(ZeroTangent(), n_vals)
-                Δrvecs = fill(ZeroTangent(), n_vals)
-            else
-                Δlvecs = _column_vectors(storagetype(f), ΔUc)
-                Δrvecs = _column_vectors(storagetype(f), ΔVc')
-            end
-
-            xs, ys = KrylovKitCRCExt.compute_svdsolve_pullback_data(
-                ΔSdc,
-                Δlvecs,
-                Δrvecs,
-                Sdc,
-                lvecs,
-                rvecs,
-                minimal_info,
-                block(f, c),
-                :LR,
-                minimal_alg,
-                rrule_alg,
-            )
-            # `construct∂f_svd` hands back a thunk; accumulate it straight into the block
-            ChainRulesCore.add!!(
-                zerovector!(b),
-                KrylovKitCRCExt.construct∂f_svd(
-                    HasReverseMode(), block(f, c), lvecs, rvecs, xs, ys
-                ),
-            )
-        end
-        return NoTangent(), Δf, NoTangent()
-    end
-    function svd_trunc!_itersvd_pullback(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent})
-        return NoTangent(), ZeroTangent(), NoTangent()
-    end
-
-    return (U, S, V, ϵ), svd_trunc!_itersvd_pullback
+        ::typeof(svd_trunc!), f, alg::SVDAdjoint{F, R}
+    ) where {F, R <: Union{TruncPullback, GMRES, BiCGStab, Arnoldi}}
+    result = svd_trunc(f, alg)
+    return result, _svd_pullback(f, alg, result[1:3])
+end
+function ChainRulesCore.rrule(
+        ::typeof(svd_trunc_no_error!), f, alg::SVDAdjoint{F, R}
+    ) where {F, R <: Union{TruncPullback, GMRES, BiCGStab, Arnoldi}}
+    result = svd_trunc_no_error(f, alg)
+    return result, _svd_pullback(f, alg, result)
 end
 
-# KrylovKit rrule compatible with TensorMaps & function handles
-function ChainRulesCore.rrule(
-        ::typeof(svd_trunc_no_error!),
-        f,
-        alg::SVDAdjoint{F, R}
+# Shared reverse pass wrapping MatrixAlgebraKit's svd_trunc_pullback! (also works for IterSVD).
+function _svd_pullback(t, alg::SVDAdjoint{F, <:TruncPullback}, (U, S, Vᴴ)) where {F}
+    function svd_trunc!_trunc_pullback(ΔUSVᴴ′)
+        ΔUSVᴴ = map(unthunk, ChainRulesCore.backing(ΔUSVᴴ′))
+        Δf = svd_trunc_pullback!(
+            zeros(storagetype(t), space(t)), t, (U, S, Vᴴ), ΔUSVᴴ;
+            gauge_atol = _get_pullback_gauge_tol(ΔUSVᴴ, alg.rrule_alg.verbosity), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
+        )
+        return NoTangent(), Δf, NoTangent()
+    end
+    function svd_trunc!_trunc_pullback(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent})
+        return NoTangent(), ZeroTangent(), NoTangent()
+    end
+
+    return svd_trunc!_trunc_pullback
+end
+
+# Shared reverse pass using KrylovKit's adjoint solvers.
+function _svd_pullback(
+        f, alg::SVDAdjoint{F, R}, (U, S, Vᴴ)
     ) where {F, R <: Union{GMRES, BiCGStab, Arnoldi}}
-    U, S, V = svd_trunc_no_error(f, alg)
-
     # update rrule_alg tolerance to be compatible with smallest singular value
-    rrule_alg = alg.rrule_alg
     smallest_sval = minimum(((_, b),) -> minimum(diag(b)), blocks(S))
-    proper_tol = clamp(rrule_alg.tol, eps(scalartype(S))^(3 / 4), 1.0e-2 * smallest_sval)
-    rrule_alg = @set rrule_alg.tol = proper_tol
+    proper_tol = clamp(alg.rrule_alg.tol, eps(scalartype(S))^(3 / 4), 1.0e-2 * smallest_sval)
+    rrule_alg = @set $(alg.rrule_alg).tol = proper_tol
 
-    function svd_trunc!_itersvd_pullback(ΔUSVi)
+    function svd_trunc!_itersvd_pullback(ΔUSVᴴ′)
         Δf = similar(f)
-        ΔU, ΔS, ΔV, = unthunk.(ΔUSVi)
+        ΔU, ΔS, ΔVᴴ, = map(unthunk, ChainRulesCore.backing(ΔUSVᴴ′))
 
         for (c, b) in blocks(Δf)
-            Uc, Sc, Vc = block(U, c), block(S, c), block(V, c)
-            ΔUc, ΔSc, ΔVc = block(ΔU, c), block(ΔS, c), block(ΔV, c)
+            Uc, Sc, Vᴴc = block(U, c), block(S, c), block(Vᴴ, c)
+            ΔUc, ΔSc, ΔVᴴc = block(ΔU, c), block(ΔS, c), block(ΔVᴴ, c)
             Sdc = _indexable_diagview(Sc)
             ΔSdc = ΔSc isa AbstractZero ? zero(Sdc) : _indexable_diagview(ΔSc)
 
             n_vals = length(Sdc)
             lvecs = _column_vectors(storagetype(f), Uc)
-            rvecs = _column_vectors(storagetype(f), Vc')
+            rvecs = _column_vectors(storagetype(f), Vᴴc')
 
             # Dummy objects only used for warnings
             minimal_info = KrylovKit.ConvergenceInfo(n_vals, nothing, nothing, -1, -1)  # Only num. converged is used
             minimal_alg = GKL(; tol = rrule_alg.tol, verbosity = 1)  # Tolerance is used for gauge sensitivity, verbosity is used for warnings
 
-            if ΔUc isa AbstractZero && ΔVc isa AbstractZero  # Handle ZeroTangent singular vectors
+            if ΔUc isa AbstractZero && ΔVᴴc isa AbstractZero  # Handle ZeroTangent singular vectors
                 Δlvecs = fill(ZeroTangent(), n_vals)
                 Δrvecs = fill(ZeroTangent(), n_vals)
             else
                 Δlvecs = _column_vectors(storagetype(f), ΔUc)
-                Δrvecs = _column_vectors(storagetype(f), ΔVc')
+                Δrvecs = _column_vectors(storagetype(f), ΔVᴴc')
             end
 
             xs, ys = KrylovKitCRCExt.compute_svdsolve_pullback_data(
@@ -589,5 +464,5 @@ function ChainRulesCore.rrule(
         return NoTangent(), ZeroTangent(), NoTangent()
     end
 
-    return (U, S, V), svd_trunc!_itersvd_pullback
+    return svd_trunc!_itersvd_pullback
 end
