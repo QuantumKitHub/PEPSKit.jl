@@ -36,6 +36,7 @@ function enlarge_northwest_corner(
         E_west::CTMRG_PEPS_EdgeTensor, C_northwest::CTMRGCornerTensor,
         E_north::CTMRG_PEPS_EdgeTensor, A::PEPSSandwich, allocator
     )
+    # contracted left to right in the optimal order, do not change
     return @tensor allocator = allocator corner[χS DSt DSb; χE DEt DEb] :=
         E_west[χS DWt DWb; χ1] *
         C_northwest[χ1; χ2] *
@@ -47,6 +48,7 @@ function enlarge_northwest_corner(
         E_west::CTMRG_PF_EdgeTensor, C_northwest::CTMRGCornerTensor,
         E_north::CTMRG_PF_EdgeTensor, A::PFTensor, allocator
     )
+    # contracted left to right in the optimal order, do not change
     return @tensor allocator = allocator corner[χ_S D_S; χ_E D_E] :=
         E_west[χ_S DW; χ1] * C_northwest[χ1; χ2] * E_north[χ2 DN; χ_E] * A[DW D_S; DN D_E]
 end
@@ -97,6 +99,7 @@ function enlarge_northeast_corner(
         E_north::CTMRG_PEPS_EdgeTensor, C_northeast::CTMRGCornerTensor,
         E_east::CTMRG_PEPS_EdgeTensor, A::PEPSSandwich, allocator
     )
+    # contracted left to right in the optimal order, do not change
     return @tensor allocator = allocator corner[χW DWt DWb; χS DSt DSb] :=
         E_north[χW DNt DNb; χ1] *
         C_northeast[χ1; χ2] *
@@ -108,6 +111,7 @@ function enlarge_northeast_corner(
         E_north::CTMRG_PF_EdgeTensor, C_northeast::CTMRGCornerTensor,
         E_east::CTMRG_PF_EdgeTensor, A::PFTensor, allocator
     )
+    # contracted left to right in the optimal order, do not change
     return @tensor allocator = allocator corner[χ_W D_W; χ_S D_S] :=
         A[D_W D_S; DN DE] *
         (E_north[χ_W DN; χ1] * C_northeast[χ1; χ2] * E_east[χ2 DE; χ_S])
@@ -159,6 +163,7 @@ function enlarge_southeast_corner(
         E_east::CTMRG_PEPS_EdgeTensor, C_southeast::CTMRGCornerTensor,
         E_south::CTMRG_PEPS_EdgeTensor, A::PEPSSandwich, allocator
     )
+    # contracted left to right in the optimal order, do not change
     return @tensor allocator = allocator corner[χN DNt DNb; χW DWt DWb] :=
         E_east[χN DEt DEb; χ1] *
         C_southeast[χ1; χ2] *
@@ -170,6 +175,7 @@ function enlarge_southeast_corner(
         E_east::CTMRG_PF_EdgeTensor, C_southeast::CTMRGCornerTensor,
         E_south::CTMRG_PF_EdgeTensor, A::PFTensor, allocator
     )
+    # contracted left to right in the optimal order, do not change
     return @tensor allocator = allocator corner[χ_N D_N; χ_W D_W] :=
         E_east[χ_N D1; χ1] * C_southeast[χ1; χ2] * E_south[χ2 D2; χ_W] * A[D_W D2; D_N D1]
 end
@@ -220,6 +226,7 @@ function enlarge_southwest_corner(
         E_south::CTMRG_PEPS_EdgeTensor, C_southwest::CTMRGCornerTensor,
         E_west::CTMRG_PEPS_EdgeTensor, A::PEPSSandwich, allocator
     )
+    # contracted left to right in the optimal order, do not change
     return @tensor allocator = allocator corner[χE DEt DEb; χN DNt DNb] :=
         E_south[χE DSt DSb; χ1] *
         C_southwest[χ1; χ2] *
@@ -231,6 +238,7 @@ function enlarge_southwest_corner(
         E_south::CTMRG_PF_EdgeTensor, C_southwest::CTMRGCornerTensor,
         E_west::CTMRG_PF_EdgeTensor, A::PFTensor, allocator
     )
+    # contracted left to right in the optimal order, do not change
     return @tensor allocator = allocator corner[χ_E D_E; χ_N D_N] :=
         E_south[χ_E D1; χ1] * C_southwest[χ1; χ2] * E_west[χ2 D2; χ_N] * A[D2 D1; D_N D_E]
 end
