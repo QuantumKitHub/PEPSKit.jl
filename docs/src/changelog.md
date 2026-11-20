@@ -22,6 +22,7 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Added
 
+- Triangular CTMRG for PEPS and classical partition functions, with onsite and nearest-neighbor PEPS observables and native optimization using `FixedPointGradient`
 - `TensorKit.storagetype` for `InfinitePEPS`, `InfinitePEPO`, `InfinitePartitionFunction`, `InfiniteSquareNetwork` and `CTMRGEnv` (#429)
 
 ### Changed

@@ -92,7 +92,16 @@ end
 function checklattice(::Type{Bool}, peps::InfinitePEPS, O::LocalOperator)
     return physicalspace(peps) == physicalspace(O)
 end
-function checklattice(::Type{Bool}, H::LocalOperator, peps::InfinitePEPS)
+# The operator unit cell must be a supercell of the (possibly sheared) state unit cell.
+function checklattice(::Type{Bool}, peps::InfinitePEPSTriangular, O::LocalOperator)
+    cell = _cell(peps)
+    Nr, Nc = size(O)
+    _site(cell, 1 + Nr, 1) == _site(cell, 1, 1 + Nc) == (1, 1) || return false
+    return all(CartesianIndices(physicalspace(O))) do I
+        return physicalspace(peps, Tuple(I)...) == physicalspace(O)[I]
+    end
+end
+function checklattice(::Type{Bool}, H::LocalOperator, peps::Union{InfinitePEPS, InfinitePEPSTriangular})
     return checklattice(Bool, peps, H)
 end
 function checklattice(::Type{Bool}, pepo::InfinitePEPO, O::LocalOperator)

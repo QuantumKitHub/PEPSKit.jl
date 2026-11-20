@@ -9,17 +9,21 @@ Compute the expectation value ⟨bra|O|ket⟩ / ⟨bra|ket⟩ or tr(O * state) /
 This can be done either for a PEPS, or alternatively for a density matrix PEPO.
 In the latter case the first signature corresponds to a single layer PEPO contraction, while
 the second signature yields a bilayer contraction instead.
+
+For an `InfinitePEPSTriangular`, dense one-site and nearest-neighbor terms are supported.
+The three bond families have offsets `(0, 1)`, `(1, -1)`, and `(1, 0)`.
 """
 function MPSKit.expectation_value(
         bra::S, O::LocalOperator, ket::S, env
-    ) where {S <: InfiniteState}
+    ) where {S <: Union{InfiniteState, InfinitePEPSTriangular}}
     checklattice(bra, O, ket)
+    isempty(O.terms) && return zero(scalartype(ket))
     term_vals = dtmap(collect(O.terms)) do (inds, operator)  # OhMyThreads can't iterate over O.terms directly
         return local_expectation_value(inds, bra, operator, ket, env)
     end
     return sum(term_vals)
 end
-MPSKit.expectation_value(peps::InfinitePEPS, O::LocalOperator, env) = expectation_value(peps, O, peps, env)
+MPSKit.expectation_value(peps::Union{InfinitePEPS, InfinitePEPSTriangular}, O::LocalOperator, env) = expectation_value(peps, O, peps, env)
 function MPSKit.expectation_value(state::InfinitePEPO, O::LocalOperator, env)
     checklattice(state, O)
     term_vals = dtmap(collect(O.terms)) do (inds, operator)  # OhMyThreads can't iterate over O.terms directly
