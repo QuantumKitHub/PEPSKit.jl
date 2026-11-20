@@ -98,9 +98,10 @@ function ChainRulesCore.rrule(
     QR = left_orth(t, alg)
 
     """Propagate QR cotangents with the configured gauge-sensitivity tolerance."""
-    function left_orth!_pullback(ΔQR)
+    function left_orth!_pullback((ΔQ, ΔR))
+        ΔQR = map(unthunk, (ΔQ, ΔR))
         Δt = zeros(storagetype(t), space(t))
-        MatrixAlgebraKit.qr_pullback!(Δt, t, QR, unthunk.(ΔQR); gauge_atol = _get_pullback_gauge_tol(ΔQR, alg.rrule_alg.verbosity))
+        MatrixAlgebraKit.qr_pullback!(Δt, t, QR, ΔQR; gauge_atol = _get_pullback_gauge_tol(ΔQR, alg.rrule_alg.verbosity))
         return NoTangent(), Δt, NoTangent()
     end
     function left_orth!_pullback(::Tuple{ZeroTangent, ZeroTangent})
@@ -129,9 +130,10 @@ function ChainRulesCore.rrule(
     LQ = right_orth(t, alg)
 
     """Propagate LQ cotangents with the configured gauge-sensitivity tolerance."""
-    function right_orth!_pullback(ΔLQ)
+    function right_orth!_pullback((ΔL, ΔQ))
+        ΔLQ = map(unthunk, (ΔL, ΔQ))
         Δt = zeros(storagetype(t), space(t))
-        MatrixAlgebraKit.lq_pullback!(Δt, t, LQ, unthunk.(ΔLQ); gauge_atol = _get_pullback_gauge_tol(ΔLQ, alg.rrule_alg.verbosity))
+        MatrixAlgebraKit.lq_pullback!(Δt, t, LQ, ΔLQ; gauge_atol = _get_pullback_gauge_tol(ΔLQ, alg.rrule_alg.verbosity))
         return NoTangent(), Δt, NoTangent()
     end
     function right_orth!_pullback(::Tuple{ZeroTangent, ZeroTangent})

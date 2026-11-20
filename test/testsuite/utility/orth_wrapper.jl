@@ -1,6 +1,6 @@
 using Test, Random, LinearAlgebra
 using TensorKit, MatrixAlgebraKit, PEPSKit, Zygote, Adapt
-using ChainRulesCore: rrule, NoTangent, ZeroTangent
+using ChainRulesCore: rrule, NoTangent, ZeroTangent, Tangent, Thunk
 
 """Check shared QR/LQ algorithms and pullbacks, including mixed dual fermionic legs."""
 function utility_orth_wrapper(AT)
@@ -16,6 +16,14 @@ function utility_orth_wrapper(AT)
         @test configured.fwd_alg === fwd_alg
         @test configured.rrule_alg === rrule_alg
         @test configured == OrthAdjoint(fwd_alg, rrule_alg)
+
+        @testset "Thunked gauge tolerance $orth!" for orth! in (left_orth!, right_orth!)
+            A = adapt(AT, randn(ComplexF64, ℂ^4 ← ℂ^6))
+            factors, back = @inferred rrule(orth!, copy(A), configured)
+            cot = map(x -> 2x, factors)
+            thunked = Tangent{Any}(map(x -> Thunk(() -> x), cot)...)
+            @test (@inferred back(thunked))[2] ≈ (@inferred back(cot))[2]
+        end
 
         @testset "$(typeof(alg.fwd_alg)), $(sectortype(V)), $nout ← $nin, $T" for alg in algorithms, V in spaces, (nout, nin) in ((2, 3), (3, 2)), T in (Float64, ComplexF64)
             output, input = (prod(ntuple(i -> isodd(i) ? V : V', n)) for n in (nout, nin))
