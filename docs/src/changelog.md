@@ -23,6 +23,7 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 ### Added
 
 - `TensorKit.storagetype` for `InfinitePEPS`, `InfinitePEPO`, `InfinitePartitionFunction`, `InfiniteSquareNetwork` and `CTMRGEnv` (#429)
+- Boundary MPS contractions through `leading_boundary`, with `C4vBoundaryMPS` and `C4vBoundaryMPSEnv` for single-site networks with rotation and Hermitian reflection symmetry, and `BoundaryMPS` and `BoundaryMPSEnv` for any unit cell, including their gradients through `ImplicitGradient` for use in `fixedpoint` (#426)
 
 ### Changed
 

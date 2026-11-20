@@ -81,12 +81,17 @@ function select_algorithm(
         boundary_alg = _dynamic_tol_or_alg(boundary_alg; dynamic_tol_kwargs...)
     end
 
-    # C4vCTMRG-specific defaults
-    if parent_alg(boundary_alg) isa C4vCTMRG
+    # defaults specific to fully symmetric contraction algorithms
+    if parent_alg(boundary_alg) isa Union{C4vCTMRG, C4vBoundaryMPS}
         # symmetrize state and gradient
         if isnothing(symmetrization)
             symmetrization = RotateReflect()
         end
+    end
+
+    # boundary MPS contractions are only differentiated implicitly
+    if parent_alg(boundary_alg) isa BoundaryMPSAlgorithm && gradient_alg isa NamedTuple
+        gradient_alg = (; alg = :ImplicitGradient, gradient_alg...)
     end
 
     # adjust gradient verbosity and construct the gradient algorithm
@@ -130,6 +135,17 @@ function select_algorithm(
         boundary_alg, gradient_alg, optimizer_alg, precondition_alg,
         symmetrization, kwargs...,
     )
+end
+
+function select_algorithm(
+        ::typeof(leading_boundary), ::C4vBoundaryMPSEnv; alg = :C4vBoundaryMPS, kwargs...
+    )
+    return BoundaryMPSAlgorithm(; alg, kwargs...)
+end
+function select_algorithm(
+        ::typeof(leading_boundary), ::BoundaryMPSEnv; alg = Defaults.boundarymps_alg, kwargs...
+    )
+    return BoundaryMPSAlgorithm(; alg, kwargs...)
 end
 
 function select_algorithm(

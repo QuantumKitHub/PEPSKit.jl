@@ -25,6 +25,11 @@ function reduced_densitymatrix1x1(
         edge(env, WEST, row, col - 1), corner(env, NORTHWEST, row - 1, col - 1)
     )
 
+    return _densitymatrix1x1(E_north, E_east, E_south, E_west, A, Ā)
+end
+
+# contraction of a single site with the corners absorbed into the surrounding edges
+function _densitymatrix1x1(E_north, E_east, E_south, E_west, A, Ā)
     @tensor EE_SW[χSE χNW DSb DWb; DSt DWt] :=
         E_south[χSE DSt DSb; χSW] * E_west[χSW DWt DWb; χNW]
 
@@ -70,6 +75,17 @@ function reduced_densitymatrix2x1(
         edge(env, WEST, row, col - 1), corner(env, NORTHWEST, row - 1, col - 1)
     )
 
+    return _densitymatrix2x1(
+        E_north, E_northeast, E_southeast, E_south, E_southwest, E_northwest,
+        A_north, Ā_north, A_south, Ā_south,
+    )
+end
+
+# contraction of a vertical pair of sites with the corners absorbed into the surrounding edges
+function _densitymatrix2x1(
+        E_north, E_northeast, E_southeast, E_south, E_southwest, E_northwest,
+        A_north, Ā_north, A_south, Ā_south,
+    )
     @tensor EE_NW[χW χNE DNWt DNt; DNWb DNb] :=
         E_northwest[χW DNWt DNWb; χNW] * E_north[χNW DNt DNb; χNE]
     @tensor EEA_NW[χW DMb dNb χNE DNEb; DNWt DNt] :=
@@ -120,6 +136,17 @@ function reduced_densitymatrix1x2(
         edge(env, WEST, row, col - 1), corner(env, NORTHWEST, row - 1, col - 1)
     )
 
+    return _densitymatrix1x2(
+        E_northwest, E_northeast, E_east, E_southeast, E_southwest, E_west,
+        A_west, Ā_west, A_east, Ā_east,
+    )
+end
+
+# contraction of a horizontal pair of sites with the corners absorbed into the surrounding edges
+function _densitymatrix1x2(
+        E_northwest, E_northeast, E_east, E_southeast, E_southwest, E_west,
+        A_west, Ā_west, A_east, Ā_east,
+    )
     @tensor EE_SW[χS χNW DSWt DWt; DSWb DWb] :=
         E_southwest[χS DSWt DSWb; χSW] * E_west[χSW DWt DWb; χNW]
     @tensor EEA_SW[χS DMb dWb χNW DNWb; DSWt DWt] :=
