@@ -37,6 +37,7 @@ end
 CTMRG_SYMBOLS[:SimultaneousCTMRG] = SimultaneousCTMRG
 
 function ctmrg_iteration(network, env::CTMRGEnv, alg::SimultaneousCTMRG)
+    alg = _prepare_ctmrg(alg, env)
     coordinates = eachcoordinate(network, 1:4)
     T_corners = Base.promote_op(
         TensorMap ∘ EnlargedCorner, typeof(network), typeof(env), eltype(coordinates)
@@ -95,7 +96,7 @@ function simultaneous_projectors(
     ) where {E}
     coordinate′ = _next_coordinate(coordinate, size(env)[2:3]...)
     trunc = truncation_strategy(alg, env.edges[coordinate[1], coordinate′[2:3]...])
-    alg′ = _set_decomposition_truncation(alg, trunc)
+    alg′ = _set_decomposition_truncation(alg, trunc, coordinate)
     ec = (enlarged_corners[coordinate...], enlarged_corners[coordinate′...])
     return compute_projector(ec, alg′)
 end
@@ -107,7 +108,7 @@ function simultaneous_projectors(
     coordinate3 = _next_coordinate(coordinate2, rowsize, colsize)
     coordinate4 = _next_coordinate(coordinate3, rowsize, colsize)
     trunc = truncation_strategy(alg, env.edges[coordinate[1], coordinate2[2:3]...])
-    alg′ = _set_decomposition_truncation(alg, trunc)
+    alg′ = _set_decomposition_truncation(alg, trunc, coordinate)
     ec = (
         enlarged_corners[coordinate4...],
         enlarged_corners[coordinate...],

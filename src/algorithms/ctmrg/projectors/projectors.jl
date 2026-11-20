@@ -83,10 +83,18 @@ end
 Set the truncation strategy of the decomposition algorithm within a given projector
 algorithm, keeping all other settings the same.
 """
-function _set_decomposition_truncation(alg::ProjectorAlgorithm, trunc::TruncationStrategy)
-    decomp_alg = decomposition_algorithm(alg)
+function _set_decomposition_truncation(alg::ProjectorAlgorithm, trunc::TruncationStrategy, coordinate = nothing)
+    decomp_alg = _select_decomposition(decomposition_algorithm(alg), coordinate)
     truncated_fwd_alg = TruncatedAlgorithm(decomp_alg.fwd_alg, trunc)
     decomp_alg = @set decomp_alg.fwd_alg = truncated_fwd_alg
     alg = @set alg.decomposition_alg = decomp_alg
     return alg
 end
+
+# Dense decompositions materialize the environment; iterative ones may keep its factors.
+_environment_product(a, b, alg) = half_infinite_environment(a, b)
+_projector_svd(t, alg) = svd_trunc!(normalize(t), alg)
+_select_decomposition(alg, coordinate) = alg
+_prepare_ctmrg(alg, env) = alg
+_rotate_decomposition(alg) = alg
+_decomposition_metrics(alg) = (;)

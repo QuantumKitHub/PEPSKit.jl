@@ -33,6 +33,7 @@ Construct a `SVDAdjoint` algorithm struct based on the following keyword argumen
       full decomposition. Available algorithms are:
         - `:GKL` : Iterative Krylov-based SVD only computing the specifed number of
           singular values and vectors, see [`IterSVD`](@ref)
+        - `:SubspaceIteration` : Recycled alternating subspace iteration, see [`SubspaceIteration`](@ref).
 * `rrule_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=:$(Defaults.svd_rrule_alg))`:
   Reverse-rule algorithm for differentiating the SVD. Can be supplied by an `Algorithm`
   instance directly or as a `NamedTuple` where `alg` is one of the following:
@@ -81,10 +82,12 @@ function SVDAdjoint(; fwd_alg = (;), rrule_alg = (;))
         fwd_alg
     end
 
+    fwd_base = fwd_algorithm isa TruncatedAlgorithm ? fwd_algorithm.alg : fwd_algorithm
+
     # parse reverse-rule SVD algorithm
     rrule_algorithm = if rrule_alg isa NamedTuple
         rrule_kwargs = (;
-            alg = _default_svd_rrule_alg(fwd_algorithm), # default rrule depends on forward algorithm
+            alg = _default_svd_rrule_alg(fwd_base), # default rrule depends on forward algorithm
             tol = Defaults.svd_rrule_tol,
             krylovdim = Defaults.svd_rrule_min_krylovdim,
             degeneracy_atol = Defaults.rrule_degeneracy_atol,
@@ -97,7 +100,7 @@ function SVDAdjoint(; fwd_alg = (;), rrule_alg = (;))
         rrule_type = SVD_RRULE_SYMBOLS[rrule_kwargs.alg]
 
         # IterSVD is incompatible with tsvd rrule -> default to Arnoldi
-        if rrule_type <: FullPullback && fwd_algorithm isa IterSVD
+        if rrule_type <: FullPullback && (fwd_base isa IterSVD || fwd_base isa SubspaceIteration)
             rrule_type = Arnoldi
         end
 

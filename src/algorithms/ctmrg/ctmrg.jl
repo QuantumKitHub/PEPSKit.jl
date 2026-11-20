@@ -109,6 +109,7 @@ function leading_boundary(
         env₀::AbstractCTMRGEnv, network::InfiniteSquareNetwork, alg::CTMRGAlgorithm
     )
     check_input(leading_boundary, network, env₀, alg)
+    alg = _prepare_ctmrg(alg, env₀)
     log = ignore_derivatives(() -> MPSKit.IterLog("CTMRG"))
     return with_verbosity(; alg.verbosity) do
         env = deepcopy(env₀)
@@ -138,7 +139,7 @@ function leading_boundary(
         info = (;
             converged,
             convergence_error = η,
-            contraction_metrics = info_iter.contraction_metrics,
+            contraction_metrics = merge(info_iter.contraction_metrics, _decomposition_metrics(alg)),
         )
         return env, info
     end
@@ -266,7 +267,7 @@ end
     calc_convergence_lazy(env, env_prev, CS_old, TS_old, alg; exact = false)
 
 Like `calc_convergence(env, CS_old, TS_old, alg)`, but only computes the edge spectra
-if the corner distance is within `alg.tol` or `exact == true`. 
+if the corner distance is within `alg.tol` or `exact == true`.
 """
 function calc_convergence_lazy(env, env_prev, CS_old, TS_old, alg; exact::Bool = false)
     corners, edges = convergence_tensors(env, alg)
