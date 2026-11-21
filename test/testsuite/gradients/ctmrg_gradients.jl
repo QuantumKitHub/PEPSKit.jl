@@ -68,7 +68,7 @@ function gradient_cases(model, ctmrg_alg, projector_alg)
         push!(cases, ("implicit, GMRES", :FullPullback, gradient_alg(:ImplicitGradient, :GMRES)))
     end
     if (ctmrg_alg, projector_alg) == (:SimultaneousCTMRG, :HalfInfiniteProjector)
-        for solver in (:GeomSum, :ManualIter, :BiCGStab, :Arnoldi)
+        for solver in (:GeomSum, :ManualIter, :BiCGStab, :Arnoldi, :AndersonMixing)
             push!(cases, ("fixed point, $solver", :FullPullback, gradient_alg(:FixedPointGradient, solver)))
         end
         push!(cases, ("implicit, BiCGStab", :FullPullback, gradient_alg(:ImplicitGradient, :BiCGStab)))
