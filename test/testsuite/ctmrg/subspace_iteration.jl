@@ -6,8 +6,9 @@ function ctmrg_subspace_iteration(AT)
             Random.seed!(265)
             V = fermionic ? Vect[FermionParity](0 => 1, 1 => 1) : ℂ^2
             χ = fermionic ? Vect[FermionParity](0 => 2, 1 => 1) : ℂ^3
-            ψ = adapt(AT, InfinitePEPS(V, V; unitcell))
-            env = CTMRGEnv(ψ, χ)
+            ψ = InfinitePEPS(V, V; unitcell)
+            env = adapt(AT, CTMRGEnv(ψ, χ))
+            ψ = adapt(AT, ψ)
             K = fuse(χ ⊗ V ⊗ V')
             full = flavor(; projector_alg = projector, miniter = 2, maxiter = 2, tol = 0.0, verbosity = 0)
             si = flavor(;
@@ -23,8 +24,9 @@ function ctmrg_subspace_iteration(AT)
             @test si.projector_alg.decomposition_alg.fwd_alg.cache[] === nothing
         end
         @testset "Per-cut warm starts, $flavor" for flavor in (SimultaneousCTMRG, SequentialCTMRG)
-            ψ = adapt(AT, InfinitePEPS(ℂ^2, ℂ^2; unitcell = (2, 3)))
-            env = CTMRGEnv(ψ, ℂ^3)
+            ψ = InfinitePEPS(ℂ^2, ℂ^2; unitcell = (2, 3))
+            env = adapt(AT, CTMRGEnv(ψ, ℂ^3))
+            ψ = adapt(AT, ψ)
             alg = flavor(; projector_alg = :FullInfiniteProjector, decomposition_alg = (; alg = :SubspaceIteration, subspace = ℂ^5), verbosity = 0)
             active = PEPSKit._prepare_ctmrg(alg, env)
             grid = active.projector_alg.decomposition_alg.fwd_alg.cache

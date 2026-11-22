@@ -29,7 +29,7 @@ function gradients_subspace_iteration(AT)
                 M = factorized ? PEPSKit._factorized_environment(t, B) : PEPSKit.half_infinite_environment(t, B)
                 u, s, v, = PEPSKit._projector_svd(M, algorithm)
                 if !factorized
-                    Q = ignore_derivatives(() -> isometry(ComplexF64, W ← K))
+                    Q = ignore_derivatives(() -> isometry(storagetype(u), W ← K))
                     u, v = PEPSKit._subspace_svd_phase_correction(u, v, Q' * u)
                 end
                 return real(dot(target, normalize(u * s * v))) + 0.1real(dot(target_U, u))
@@ -49,9 +49,10 @@ function gradients_subspace_iteration(AT)
             χ = fermionic ? Vect[FermionParity](0 => 2, 1 => 2) : ℂ^4
             # Compressed Heisenberg trials; integer fermionic budgets also exercise allocation in AD.
             K = fermionic ? dim(fuse(χ ⊗ V ⊗ V')) : ℂ^(projector == :FullInfiniteProjector ? 8 : 10)
-            ψ = adapt(AT, InfinitePEPS(V, V))
+            ψ = InfinitePEPS(V, V)
             ψ /= norm(ψ)
-            env = CTMRGEnv(ψ, χ)
+            env = adapt(AT, CTMRGEnv(ψ, χ))
+            ψ = adapt(AT, ψ)
             direction = adapt(AT, InfinitePEPS(V, V)); direction /= norm(direction)
             H = adapt(AT, fermionic ? pwave_superconductor(InfiniteSquare()) : heisenberg_XYZ(InfiniteSquare()))
             alg = flavor(;

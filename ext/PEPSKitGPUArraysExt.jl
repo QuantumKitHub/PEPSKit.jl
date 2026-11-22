@@ -15,6 +15,8 @@ function PEPSKit._column_vectors(::Type{A}, m::AbstractMatrix) where {A <: AnyGP
 end
 PEPSKit._indexable_diagview(m::AnyGPUArray) = collect(MAK.diagview(m))
 
+PEPSKit._subspace_host_data(v::AnyGPUArray{T, 1}) where {T} = Array(v)
+
 const GPUTensorMap = TensorMap{<:LinearAlgebra.BlasFloat, <:Any, <:Any, <:Any, <:AbstractGPUArray}
 
 _offsets(S::TensorKit.SectorDict) = Int32.(first.(values(S)))

@@ -70,12 +70,12 @@ end
 function _subspace_left_range(M, X, K, alg)
     W = fuse(codomain(M))
     sampled = typeof(K)(s => dim(K, s) for s in sectors(K) if dim(K, s) < dim(W, s))
-    dim(sampled) == 0 && return isometry(scalartype(X), codomain(M) ← K), false
-    E = sampled == K ? nothing : isometry(scalartype(X), K ← sampled)
+    dim(sampled) == 0 && return isometry(storagetype(X), codomain(M) ← K), false
+    E = sampled == K ? nothing : isometry(storagetype(X), K ← sampled)
     Q, _ = left_orth!(M * (isnothing(E) ? X : X * E), alg.orth_alg)
     isnothing(E) && return Q, true
     exact = typeof(K)(s => dim(K, s) for s in sectors(K) if dim(sampled, s) == 0)
-    Q0, E0 = isometry(scalartype(X), codomain(M) ← exact), isometry(scalartype(X), K ← exact)
+    Q0, E0 = isometry(storagetype(X), codomain(M) ← exact), isometry(storagetype(X), K ← exact)
     return Q0 * E0' + Q * E', true
 end
 
@@ -99,7 +99,7 @@ function MatrixAlgebraKit.svd_trunc!(M, wrapped::TruncatedAlgorithm{<:SubspaceIt
     refresh = adaptive && (!compatible || (alg.charge_refresh > 0 && iteration % alg.charge_refresh == 0))
     K = adaptive ? (refresh ? _subspace_probe_space(available, alg, trunc, compatible ? K : nothing) : K) : infimum(alg.subspace, available)
     infimum(required, K) == required || throw(ArgumentError("Subspace must contain the target truncation space."))
-    X = _resize_subspace_basis(previous, domain(M), K, alg, scalartype(M))
+    X = _resize_subspace_basis(previous, domain(M), K, alg, A)
     Q, sampled = _subspace_left_range(M, X, K, alg)
     for _ in 1:alg.n_subspace_iter
         sampled || break
@@ -110,12 +110,12 @@ function MatrixAlgebraKit.svd_trunc!(M, wrapped::TruncatedAlgorithm{<:SubspaceIt
     core, Z = sampled ? right_orth!(B, alg.orth_alg) : (B, nothing)
     # The small SVD keeps oversampling directions for the next decomposition.
     u, s, v = svd_compact!(core)
-    E = _subspace_truncation_isometry(s, trunc, scalartype(M))
+    E = _subspace_truncation_isometry(s, trunc, A)
     U, S, V = Q * (u * E), DiagonalTensorMap(real(E' * s * E)), E' * v
     !isnothing(Z) && (V = V * Z)
     error = norm(s - E * S * E')
     X = isnothing(Z) ? copy(v') : (refresh || alg.rotate_basis ? Z' * v' : copy(Z'))
-    refresh && (X = X * _adaptive_subspace_isometry(s, alg, trunc, scalartype(M)))
+    refresh && (X = X * _adaptive_subspace_isometry(s, alg, trunc, A))
     subspace_error = isnothing(previous) || space(previous) != space(X) ? Inf : norm(X - previous * (previous' * X)) / sqrt(dim(domain(X)))
     alg.cache[] = (; X, Q, iteration = iteration + 1, subspace_error)
     Utype = TensorMap{T, spacetype(M), length(codomain(M)), 1, A}
@@ -161,32 +161,47 @@ function _subspace_probe_space(available, alg, trunc, current = nothing)
     return K
 end
 
+function _subspace_to_storage(::Type{A}, t) where {A}
+    storagetype(t) === A && return t
+    return TensorMap(copyto!(A(undef, length(t.data)), t.data), space(t))
+end
+
+# Keep the per-cut RNG stream independent of the array backend.
+_subspace_random_basis(rng, ::Type{A}, space) where {A} =
+    _subspace_to_storage(A, randn(rng, eltype(A), space))
+
 """Preserve compatible cached columns and add orthogonal Gaussian directions in enlarged sectors."""
-function _resize_subspace_basis(X, output, K, alg, ::Type{T}) where {T}
-    if isnothing(X) || scalartype(X) != T || codomain(X) != output
-        return first(left_orth!(randn(alg.rng, T, output ← K), alg.orth_alg))
+function _resize_subspace_basis(X, output, K, alg, ::Type{A}) where {A}
+    if isnothing(X) || codomain(X) != output
+        return first(left_orth!(_subspace_random_basis(alg.rng, A, output ← K), alg.orth_alg))
     end
     fuse(domain(X)) == K && return X
     old, keep, added, extra = let
         common = infimum(fuse(domain(X)), K)
         extra = K ⊖ common
-        isometry(T, domain(X) ← common), isometry(T, K ← common), left_null(isometry(T, K ← common)), extra
+        isometry(A, domain(X) ← common), isometry(A, K ← common), left_null(isometry(A, K ← common)), extra
     end
     U = X * old
     dim(extra) == 0 && return U * keep'
-    Z = randn(alg.rng, T, output ← extra)
+    Z = _subspace_random_basis(alg.rng, A, output ← extra)
     Q, _ = left_orth!(Z - U * (U' * Z), alg.orth_alg)
     return U * keep' + Q * added'
 end
 
+_subspace_host_data(v::AbstractVector) = v
+
 """Select reduced singular directions with fixed sector counts or a global truncation strategy."""
-function _subspace_truncation_isometry(s, trunc, ::Type{T}) where {T}
+function _subspace_truncation_isometry(s, trunc, ::Type{A}) where {A}
     W = space(s, 1)
-    trunc isa TruncationSpace && return isometry(T, W ← trunc.space)
-    indices = MatrixAlgebraKit.findtruncated_svd(diagview(s), trunc)
+    trunc isa TruncationSpace && return isometry(A, W ← trunc.space)
+    # Select charges on the host and transfer the small isometry to the input backend.
+    values = diagview(s)
+    indices = MatrixAlgebraKit.findtruncated_svd(TensorKit.SectorVector(_subspace_host_data(parent(values)), values.structure), trunc)
     target = TensorKit.Factorizations.truncate_space(W, indices)
     dim(target) > 0 || throw(ArgumentError("Truncation retained no symmetry multiplet."))
-    return TensorKit.Factorizations.truncate_domain!(zeros(T, W ← target), id(T, W), indices)
+    T = eltype(A)
+    E = TensorKit.Factorizations.truncate_domain!(zeros(T, W ← target), id(T, W), indices)
+    return _subspace_to_storage(A, E)
 end
 
 """Keep the strongest sampled directions within the budget, reserving fixed target multiplicities."""
@@ -207,14 +222,29 @@ The forward SVD fixes this gauge by default, but its pullback assumes gauge-inva
 Keep the phase correction in the AD graph when lifting the singular vectors.
 """
 function _subspace_svd_phase_correction(U::AbstractTensorMap, V::AbstractTensorMap, basis)
-    layout = ignore_derivatives(() -> collect(values(TensorKit.blockstructure(space(basis)))))
-    phase_blocks = map(layout) do (dims, inds)
-        u = reshape(view(basis.data, inds), dims)
-        pivots = ignore_derivatives(() -> [last(findmax(abs, col)) for col in eachcol(u)])
-        return vec(diagm([sign(u[pivots[j], j]) for j in axes(u, 2)]))
+    pivots = ignore_derivatives() do
+        data = _subspace_host_data(basis.data)
+        return mapreduce(vcat, values(TensorKit.blockstructure(space(basis))); init = Int[]) do (dims, inds)
+            u = reshape(view(data, inds), dims)
+            return [first(inds) - 1 + LinearIndices(u)[last(findmax(abs, col)), j] for (j, col) in enumerate(eachcol(u))]
+        end
     end
-    phases = TensorMap{scalartype(U)}(reduce(vcat, phase_blocks), domain(U) ← domain(U))
+    phases = _subspace_phase_diagonal(sign.(basis.data[pivots]), domain(U)[1])
     return (U * phases')::typeof(U), (phases * V)::typeof(V)
+end
+
+_subspace_phase_diagonal(data, K) = DiagonalTensorMap(data, K)
+
+# The multiplication pullbacks can return a dense cotangent for the diagonal phases.
+function ChainRulesCore.rrule(::typeof(_subspace_phase_diagonal), data, K)
+    phases, pullback = rrule(DiagonalTensorMap, data, K)
+    project = ProjectTo(phases)
+    function phase_pullback(Δ)
+        d = unthunk(Δ)
+        d isa AbstractZero && return NoTangent(), d, NoTangent()
+        return pullback(project(d))
+    end
+    return phases, phase_pullback
 end
 
 

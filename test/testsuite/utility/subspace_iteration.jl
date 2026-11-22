@@ -12,11 +12,11 @@ function utility_subspace_iteration(AT)
             Random.seed!(264)
             K = W isa ComplexSpace ? ℂ^5 : typeof(W)(c => 3 for c in sectors(W))
             χ = W isa ComplexSpace ? ℂ^2 : typeof(W)(c => 1 for c in sectors(W))
-            M = adapt(AT, zeros(T, W ← W))
+            M = zeros(T, W ← W)
             for (_, b) in blocks(M)
                 b[diagind(b)] .= 0.2 .^ (0:(size(b, 1) - 1))
             end
-            M = first(left_orth(adapt(AT, randn(T, space(M))))) * M * last(right_orth(adapt(AT, randn(T, space(M)))))
+            M = first(left_orth(adapt(AT, randn(T, space(M))))) * adapt(AT, M) * last(right_orth(adapt(AT, randn(T, space(M)))))
             fwd = SubspaceIteration(; subspace = K, n_subspace_iter = q)
             alg = TruncatedAlgorithm(fwd, truncspace(χ))
             local u, s, v
@@ -25,7 +25,7 @@ function utility_subspace_iteration(AT)
             end
             ur, sr, vr, = svd_trunc(M, TruncatedAlgorithm(DefaultAlgorithm(), truncspace(χ)))
             @test u * s * v ≈ ur * sr * vr rtol = 1.0e-9
-            @test fwd.cache[].X' * fwd.cache[].X ≈ id(T, K)
+            @test fwd.cache[].X' * fwd.cache[].X ≈ adapt(AT, id(T, K))
         end
         @testset "Rectangular complete ranges, $m ← $n" for (m, n) in ((5, 7), (7, 5))
             M = adapt(AT, randn(ComplexF64, ℂ^m ← ℂ^n))
