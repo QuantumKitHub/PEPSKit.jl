@@ -362,67 +362,89 @@ function _svd_pullback(t, alg::SVDAdjoint{F, <:TruncPullback}, (U, S, Vᴴ)) whe
     return svd_trunc!_trunc_pullback
 end
 
-# Shared reverse pass using KrylovKit's adjoint solvers.
+# Solve the complementary SVD response for all retained directions together.
+# MatrixAlgebraKit handles the retained-space contribution and its gauge conventions.
+function _svd_pullback_data(f, (u, s, v), (du, ds, dv), alg::GMRES, ::Type)
+    values = diagview(s)
+    atol = MatrixAlgebraKit.default_pullback_rank_atol(values)
+    h, a, bx, by = MatrixAlgebraKit.check_and_prepare_svd_cotangents(
+        u, values, v, du, ds, dv, length(values);
+        degeneracy_atol = atol, gauge_atol = _get_pullback_gauge_tol((du, ds, dv), alg.verbosity),
+    )
+    si = Diagonal(MatrixAlgebraKit.inv_safe.(values, atol))
+    x0 = isnothing(bx) ? zero(u) : bx * si
+    y0 = isnothing(by) ? zero(v') : by' * si
+    project(q, z) = z - q * (q' * z)
+    normal(y) = project(u, KrylovKit.apply_normal(f, y))
+    adjoint(x) = project(v', KrylovKit.apply_adjoint(f, x))
+    # Eliminate Y from X S - A⊥ Y = ΔU⊥ and Y S - A⊥' X = ΔV⊥.
+    rhs = x0 + normal(y0) * si
+    alg = @set alg.tol = alg.tol * max(norm(rhs), eps(real(eltype(values))))
+    x, info = linsolve(rhs, zero(rhs), alg) do x
+        x - normal(adjoint(x) * si) * si
+    end
+    info.converged == 0 && alg.verbosity > 0 &&
+        @warn "SVD cotangent linear problem did not converge" info.normres
+    y = y0 + adjoint(x) * si
+    g = (h + a) / 2
+    return x + u * g, y + v' * g'
+end
+
+# The vector-based KrylovKit rules remain available for Arnoldi and BiCGStab.
+function _svd_pullback_data(f, (u, s, v), (du, ds, dv), alg::Union{Arnoldi, BiCGStab}, ::Type{A}) where {A}
+    values = _indexable_diagview(s)
+    dvalues = ds isa AbstractZero ? zero(values) : _indexable_diagview(ds)
+    left, right = _column_vectors(A, u), _column_vectors(A, v')
+    dleft = du isa AbstractZero ? fill(ZeroTangent(), length(values)) : _column_vectors(A, du)
+    dright = dv isa AbstractZero ? fill(ZeroTangent(), length(values)) : _column_vectors(A, dv')
+    # BiCGStab's coupled solve requires vectors when only one side is missing.
+    if alg isa BiCGStab
+        du isa AbstractZero && !(dv isa AbstractZero) && (dleft = map(zero, left))
+        dv isa AbstractZero && !(du isa AbstractZero) && (dright = map(zero, right))
+    end
+    info = KrylovKit.ConvergenceInfo(length(values), nothing, nothing, -1, -1)
+    primal = GKL(; tol = alg.tol, verbosity = 1)
+    xs, ys = KrylovKitCRCExt.compute_svdsolve_pullback_data(
+        dvalues, dleft, dright, values, left, right, info, f, :LR, primal, alg,
+    )
+    return stack(xs), stack(ys)
+end
+
+_svd_operators(m::AbstractMatrix) = (Base.Fix1(*, m), Base.Fix1(*, m'))
+_svd_operators(m) = (x -> KrylovKit.apply_normal(m, x), x -> KrylovKit.apply_adjoint(m, x))
+
+_svd_pullback_scale(f, alg, S) = alg.rrule_alg isa GMRES ? norm(S) : one(scalartype(S))
+
 function _svd_pullback(
-        f, alg::SVDAdjoint{F, R}, (U, S, Vᴴ)
+        f, alg::SVDAdjoint{F, R}, USV; scale = _svd_pullback_scale(f, alg, USV[2]),
     ) where {F, R <: Union{GMRES, BiCGStab, Arnoldi}}
-    # update rrule_alg tolerance to be compatible with smallest singular value
-    smallest_sval = minimum(((_, b),) -> minimum(diag(b)), blocks(S))
-    proper_tol = clamp(alg.rrule_alg.tol, eps(scalartype(S))^(3 / 4), 1.0e-2 * smallest_sval)
-    rrule_alg = @set $(alg.rrule_alg).tol = proper_tol
-
-    function svd_trunc!_itersvd_pullback((ΔU, ΔS, ΔVᴴ))
-        Δf = similar(f)
-        ΔU, ΔS, ΔVᴴ, = map(unthunk, (ΔU, ΔS, ΔVᴴ))
-
-        for (c, b) in blocks(Δf)
-            Uc, Sc, Vᴴc = block(U, c), block(S, c), block(Vᴴ, c)
-            ΔUc, ΔSc, ΔVᴴc = block(ΔU, c), block(ΔS, c), block(ΔVᴴ, c)
-            Sdc = _indexable_diagview(Sc)
-            ΔSdc = ΔSc isa AbstractZero ? zero(Sdc) : _indexable_diagview(ΔSc)
-
-            n_vals = length(Sdc)
-            lvecs = _column_vectors(storagetype(f), Uc)
-            rvecs = _column_vectors(storagetype(f), Vᴴc')
-
-            # Dummy objects only used for warnings
-            minimal_info = KrylovKit.ConvergenceInfo(n_vals, nothing, nothing, -1, -1)  # Only num. converged is used
-            minimal_alg = GKL(; tol = rrule_alg.tol, verbosity = 1)  # Tolerance is used for gauge sensitivity, verbosity is used for warnings
-
-            if ΔUc isa AbstractZero && ΔVᴴc isa AbstractZero  # Handle ZeroTangent singular vectors
-                Δlvecs = fill(ZeroTangent(), n_vals)
-                Δrvecs = fill(ZeroTangent(), n_vals)
-            else
-                Δlvecs = _column_vectors(storagetype(f), ΔUc)
-                Δrvecs = _column_vectors(storagetype(f), ΔVᴴc')
-            end
-
-            xs, ys = KrylovKitCRCExt.compute_svdsolve_pullback_data(
-                ΔSdc,
-                Δlvecs,
-                Δrvecs,
-                Sdc,
-                lvecs,
-                rvecs,
-                minimal_info,
-                block(f, c),
-                :LR,
-                minimal_alg,
-                rrule_alg,
+    U, S, V = USV
+    scale = iszero(scale) ? one(scale) : scale
+    smallest = minimum(((_, b),) -> minimum(diagview(b); init = Inf), blocks(S); init = Inf) / scale
+    rrule_alg = alg.rrule_alg
+    reverse_alg = @set rrule_alg.tol = max(eps(scalartype(S))^(3 / 4), min(rrule_alg.tol, 1.0e-2 * smallest))
+    function pullback((dU, dS, dV))
+        du, ds, dv = map(unthunk, (dU, dS, dV))
+        du isa AbstractZero && ds isa AbstractZero && dv isa AbstractZero &&
+            return NoTangent(), ZeroTangent(), NoTangent()
+        X, Y = zero(U), zero(V')
+        for (c, s) in blocks(S)
+            operator = _svd_operators(block(f, c))
+            isone(scale) || (operator = map(g -> x -> g(x) / scale, operator))
+            dc = block.((du, ds, dv), Ref(c))
+            scaled_dc = (dc[1], dc[2] isa AbstractZero ? dc[2] : dc[2] * scale, dc[3])
+            x, y = _svd_pullback_data(
+                operator, (block(U, c), s / scale, block(V, c)), scaled_dc, reverse_alg, storagetype(U),
             )
-            # `construct∂f_svd` hands back a thunk; accumulate it straight into the block
-            ChainRulesCore.add!!(
-                zerovector!(b),
-                KrylovKitCRCExt.construct∂f_svd(
-                    HasReverseMode(), block(f, c), lvecs, rvecs, xs, ys
-                ),
-            )
+            copyto!(block(X, c), x / scale)
+            copyto!(block(Y, c), y / scale)
         end
-        return NoTangent(), Δf, NoTangent()
+        return NoTangent(), _svd_pullback_tangent(f, U, V, X, Y), NoTangent()
     end
-    function svd_trunc!_itersvd_pullback(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent})
-        return NoTangent(), ZeroTangent(), NoTangent()
-    end
+    return pullback
+end
 
-    return svd_trunc!_itersvd_pullback
+function _svd_pullback_tangent(f, U, V, X, Y)
+    df = mul!(similar(f), X, V)
+    return mul!(df, U, Y', true, true)
 end

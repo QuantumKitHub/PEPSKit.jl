@@ -92,7 +92,7 @@ function MatrixAlgebraKit.svd_trunc!(M, wrapped::TruncatedAlgorithm{<:SubspaceIt
     iteration = isnothing(old) ? 0 : old.iteration::Int
     previous = isnothing(old) || !(old.X isa Xtype) ? nothing : old.X::Xtype
     K = isnothing(previous) ? zero(available) : fuse(domain(previous))
-    compatible = !isnothing(previous) && scalartype(previous) == scalartype(M) && codomain(previous) == domain(M) && infimum(K, available) == K
+    compatible = !isnothing(previous) && codomain(previous) == domain(M) && infimum(K, available) == K
     required = trunc isa NoTruncation ? available : trunc isa TruncationSpace ? trunc.space : zero(available)
     compatible &= infimum(required, K) == required
     adaptive = alg.subspace isa Integer
@@ -206,7 +206,7 @@ Apply MatrixAlgebraKit's SVD phase convention with a differentiable correction.
 The forward SVD fixes this gauge by default, but its pullback assumes gauge-invariant cotangents.
 Keep the phase correction in the AD graph when lifting the singular vectors.
 """
-function _subspace_svd_phase_correction(U::AbstractTensorMap, V::AbstractTensorMap, basis = U)
+function _subspace_svd_phase_correction(U::AbstractTensorMap, V::AbstractTensorMap, basis)
     layout = ignore_derivatives(() -> collect(values(TensorKit.blockstructure(space(basis)))))
     phase_blocks = map(layout) do (dims, inds)
         u = reshape(view(basis.data, inds), dims)
@@ -218,116 +218,32 @@ function _subspace_svd_phase_correction(U::AbstractTensorMap, V::AbstractTensorM
 end
 
 
-# Solve the complementary SVD response for all retained directions together.
-# MatrixAlgebraKit handles the retained-space contribution and its gauge conventions.
-function _subspace_svd_pullback_data(f, u, s, v, du, ds, dv, alg::GMRES)
-    h, a, bx, by = MatrixAlgebraKit.check_and_prepare_svd_cotangents(
-        u, s, v, du, Diagonal(ds), dv, length(s);
-        degeneracy_atol = alg.tol, gauge_atol = _get_pullback_gauge_tol((du, ds, dv), alg.verbosity),
-    )
-    si = Diagonal(inv.(s))
-    x0 = isnothing(bx) ? zero(u) : bx * si
-    y0 = isnothing(by) ? zero(v') : by' * si
-    project(q, z) = z - q * (q' * z)
-    normal(y) = project(u, f(y, Val(false)))
-    adjoint(x) = project(v', f(x, Val(true)))
-    # Eliminate Y from X S - A⊥ Y = ΔU⊥ and Y S - A⊥' X = ΔV⊥.
-    rhs = x0 + normal(y0) * si
-    alg = @set alg.tol = alg.tol * max(norm(rhs), eps(real(eltype(s))))
-    x, info = linsolve(rhs, zero(rhs), alg) do x
-        x - normal(adjoint(x) * si) * si
-    end
-    info.converged == 0 && alg.verbosity > 0 &&
-        @warn "SVD cotangent linear problem did not converge" info.normres
-    y = y0 + adjoint(x) * si
-    g = (h + a) / 2
-    return x + u * g, y + v' * g'
+# Reuse the shared SVD rules, scaling every factorized Krylov solve by the spectrum norm.
+_svd_pullback_scale(::FactorizedMap, alg, S) = norm(S)
+
+function _svd_pullback_tangent(M::FactorizedMap, U, V, X, Y)
+    dnormal, _ = _factorized_pullback(M.factors, V', X)
+    dadjoint, _ = _factorized_pullback(adjoint(M).factors, U, Y)
+    factors = map(+, dnormal, reverse(map(adjoint, dadjoint)))
+    return Tangent{typeof(M)}(; factors)
 end
 
-# A factorized SVD uses thin pullbacks, without forming the full environment.
+# Materialization lets expert-mode TruncPullback reuse the ordinary tensor rule.
 function ChainRulesCore.rrule(
-        config::RuleConfig{>:HasReverseMode}, ::typeof(svd_trunc!),
-        M::FactorizedMap, alg::SVDAdjoint{F, R},
-    ) where {F, R <: Union{Arnoldi, GMRES, BiCGStab}}
-    U, S, V, error = svd_trunc(M, alg)
-    scale = norm(S)
-    reverse_alg = alg.rrule_alg
-    smallest = minimum(((_, b),) -> minimum(diag(b)), blocks(S)) / scale
-    reverse_alg = @set reverse_alg.tol = clamp(reverse_alg.tol, eps(scalartype(S))^(3 / 4), 1.0e-2 * smallest)
-    getdiag = reverse_alg isa GMRES ? diagview : _indexable_diagview
-    function pullback(Δ)
-        ΔU, ΔS, ΔV, = unthunk.(Δ)
-        X, Y = zero(U), zero(V')
-        for (c, s) in blocks(S)
-            u, v = block(U, c), block(V, c)
-            du, ds, dv = block(ΔU, c), block(ΔS, c), block(ΔV, c)
-            values = getdiag(s) / scale
-            dvalues = ds isa AbstractZero ? zero(values) : getdiag(ds) * scale
-            m = block(M, c)
-            f = (x, adj) -> m(x, adj) / scale
-            if reverse_alg isa GMRES
-                x, y = _subspace_svd_pullback_data(f, u, values, v, du, dvalues, dv, reverse_alg)
-                copyto!(block(X, c), x / scale)
-                copyto!(block(Y, c), y / scale)
-                continue
-            end
-            left = _column_vectors(storagetype(U), u)
-            right = _column_vectors(storagetype(V), v')
-            dleft = du isa AbstractZero ? fill(ZeroTangent(), length(values)) : _column_vectors(storagetype(U), du)
-            dright = dv isa AbstractZero ? fill(ZeroTangent(), length(values)) : _column_vectors(storagetype(V), dv')
-            info = KrylovKit.ConvergenceInfo(length(values), nothing, nothing, -1, -1)
-            primal = GKL(; tol = reverse_alg.tol, verbosity = reverse_alg.verbosity)
-            xs, ys = KrylovKitCRCExt.compute_svdsolve_pullback_data(
-                dvalues, dleft, dright, values, left, right, info,
-                f, :LR, primal, reverse_alg,
-            )
-            copyto!(block(X, c), stack(xs) / scale)
-            copyto!(block(Y, c), stack(ys) / scale)
-        end
-        dnormal, _ = _factorized_pullback(M.factors, V', X)
-        dadjoint, _ = _factorized_pullback(adjoint(M).factors, U, Y)
-        factors = map(+, dnormal, reverse(map(adjoint, dadjoint)))
-        return NoTangent(), Tangent{typeof(M)}(; factors), NoTangent()
-    end
-    return (U, S, V, error), pullback
-end
-
-# Expert-mode TruncPullback can reuse the dense Sylvester implementation.
-function ChainRulesCore.rrule(
-        config::RuleConfig{>:HasReverseMode}, ::typeof(svd_trunc!),
+        config::RuleConfig{>:HasReverseMode}, f::Union{typeof(svd_trunc!), typeof(svd_trunc_no_error!)},
         M::FactorizedMap, alg::SVDAdjoint{F, R},
     ) where {F, R <: TruncPullback}
-    U, S, V, error = svd_trunc(M, alg)
-    dense, materialize_pullback = rrule_via_ad(config, TensorMap, M)
-    function pullback(Δ)
-        dUSV = unthunk.(Δ)
-        dM = svd_trunc_pullback!(
-            zero(dense), dense, (U, S, V), dUSV;
-            gauge_atol = _get_pullback_gauge_tol(dUSV, alg.rrule_alg.verbosity), degeneracy_atol = alg.rrule_alg.degeneracy_atol
-        )
-        return NoTangent(), materialize_pullback(dM)[2], NoTangent()
-    end
-    return (U, S, V, error), pullback
-end
-
-function ChainRulesCore.rrule(
-        config::RuleConfig{>:HasReverseMode}, ::typeof(svd_trunc_no_error!),
-        M::FactorizedMap, alg::SVDAdjoint,
-    )
-    result, pullback = rrule(config, svd_trunc!, M, alg)
-    return result[1:3], Δ -> pullback((Δ..., ZeroTangent()))
+    return rrule_via_ad(config, (m, a) -> f(TensorMap(m), a), M, alg)
 end
 
 
-# Pull back thin applications without materializing the product or differentiating tuple folds.
+# Share thin application pullbacks between the SVD and full-infinite projector contractions.
 function _factorized_pullback(factors, X, ΔY)
     rights = reverse((X, accumulate((x, a) -> a * x, reverse(Base.tail(factors)); init = X)...))
-    gradients = ()
-    for j in eachindex(factors)
-        gradients = (gradients..., ProjectTo(factors[j])(ΔY * rights[j]'))
-        ΔY = factors[j]' * ΔY
+    gradients, ΔX = foldl(map(tuple, factors, rights); init = ((), ΔY)) do (gradients, dy), (a, right)
+        return (gradients..., ProjectTo(a)(dy * right')), a' * dy
     end
-    return gradients, ProjectTo(X)(ΔY)
+    return gradients, ProjectTo(X)(ΔX)
 end
 function ChainRulesCore.rrule(::typeof(*), M::FactorizedMap, X::AbstractTensorMap)
     function pullback(ΔY)

@@ -36,7 +36,6 @@ function _decomposition_metrics(alg::CTMRGAlgorithm)
     return (; subspace_error = error)
 end
 
-_fix_decomposition_allocation(alg) = alg
 function _fix_decomposition_allocation(alg::CTMRGAlgorithm)
     svd = decomposition_algorithm(alg.projector_alg)
     svd isa SubspaceSVD || return alg

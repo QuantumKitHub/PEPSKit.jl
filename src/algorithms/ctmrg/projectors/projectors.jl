@@ -97,4 +97,3 @@ _projector_svd(t, alg) = svd_trunc!(normalize(t), alg)
 _select_decomposition(alg, coordinate) = alg
 _prepare_ctmrg(alg, env) = alg
 _rotate_decomposition(alg) = alg
-_decomposition_metrics(alg) = (;)
