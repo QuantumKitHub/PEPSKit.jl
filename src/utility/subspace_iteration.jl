@@ -221,10 +221,9 @@ end
 # Solve the complementary SVD response for all retained directions together.
 # MatrixAlgebraKit handles the retained-space contribution and its gauge conventions.
 function _subspace_svd_pullback_data(f, u, s, v, du, ds, dv, alg::GMRES)
-    gtol = _get_pullback_gauge_tol(alg.verbosity)
     h, a, bx, by = MatrixAlgebraKit.check_and_prepare_svd_cotangents(
         u, s, v, du, Diagonal(ds), dv, length(s);
-        degeneracy_atol = alg.tol, gauge_atol = gtol((du, ds, dv)),
+        degeneracy_atol = alg.tol, gauge_atol = _get_pullback_gauge_tol((du, ds, dv), alg.verbosity),
     )
     si = Diagonal(inv.(s))
     x0 = isnothing(bx) ? zero(u) : bx * si
@@ -300,12 +299,11 @@ function ChainRulesCore.rrule(
     ) where {F, R <: TruncPullback}
     U, S, V, error = svd_trunc(M, alg)
     dense, materialize_pullback = rrule_via_ad(config, TensorMap, M)
-    gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
     function pullback(Δ)
         dUSV = unthunk.(Δ)
         dM = svd_trunc_pullback!(
             zero(dense), dense, (U, S, V), dUSV;
-            gauge_atol = gtol(dUSV), degeneracy_atol = alg.rrule_alg.degeneracy_atol
+            gauge_atol = _get_pullback_gauge_tol(dUSV, alg.rrule_alg.verbosity), degeneracy_atol = alg.rrule_alg.degeneracy_atol
         )
         return NoTangent(), materialize_pullback(dM)[2], NoTangent()
     end
