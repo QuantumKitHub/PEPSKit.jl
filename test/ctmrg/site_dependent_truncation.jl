@@ -31,8 +31,9 @@ peps_rect = InfinitePEPS(randn, ComplexF64, fill(ℂ^2, 2, 3), [ℂ^2 ℂ^3 ℂ^
     end
 
     # environment bond truncations rotate along with the environment
+    env, = PEPSKit.ctmrg_iteration(InfiniteSquareNetwork(peps), env0, SimultaneousCTMRG(; trunc))
     @testset "$rot" for rot in (rotl90, rotr90, rot180)
-        @test map(t -> t.space, rot(trunc).truncs) == edgespaces(rot(env0))
+        @test map(t -> t.space, rot(trunc).truncs) == edgespaces(rot(env))
     end
 
     # FixedSpaceTruncation is a truncation to the current spaces
