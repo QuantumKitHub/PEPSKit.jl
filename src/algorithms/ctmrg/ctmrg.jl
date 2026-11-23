@@ -109,6 +109,7 @@ function leading_boundary(
         env₀::AbstractCTMRGEnv, network::InfiniteSquareNetwork, alg::CTMRGAlgorithm
     )
     check_input(leading_boundary, network, env₀, alg)
+    alg′ = fix_spaces(alg, env₀) # a FixedSpaceTruncation keeps the spaces of env₀
     log = ignore_derivatives(() -> MPSKit.IterLog("CTMRG"))
     return with_verbosity(; alg.verbosity) do
         env = deepcopy(env₀)
@@ -121,7 +122,7 @@ function leading_boundary(
         converged = false
         for iter in 1:(alg.maxiter)
             env_prev = env
-            env, info_iter = ctmrg_iteration(network, env, alg)
+            env, info_iter = ctmrg_iteration(network, env, alg′)
             η, CS, TS = calc_convergence_lazy(env, env_prev, CS, TS, alg; exact = iter == alg.maxiter)
 
             if η ≤ alg.tol && iter ≥ alg.miniter

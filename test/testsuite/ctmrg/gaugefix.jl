@@ -3,7 +3,7 @@ using Random
 using PEPSKit
 using TensorKit
 using Adapt
-using PEPSKit: ctmrg_iteration, calc_elementwise_convergence
+using PEPSKit: ctmrg_iteration, calc_elementwise_convergence, fix_spaces
 using PEPSKit: ScramblingEnvGauge
 using PEPSKit: peps_normalize
 
@@ -99,7 +99,7 @@ function ctmrg_gaugefix_asymmetric(AT; minimal::Bool = false)
         env_pre = adapt(AT, env_pre)
         n = InfiniteSquareNetwork(psi)
         env, = leading_boundary(env_pre, psi, alg)
-        env′, = ctmrg_iteration(n, env, alg)
+        env′, = ctmrg_iteration(n, env, fix_spaces(alg, env))
         env_fixed = gauge_fix(env′, env, gauge_alg)
         env_diff = calc_elementwise_convergence(env, env_fixed)
         @info "Diff between iters = $(env_diff)"
@@ -120,7 +120,7 @@ function ctmrg_gaugefix_c4v(AT; minimal::Bool = false)
         env_pre = adapt(AT, env_pre)
         n = InfiniteSquareNetwork(psi)
         env, = leading_boundary(env_pre, psi, alg)
-        env′, = ctmrg_iteration(n, env, alg)
+        env′, = ctmrg_iteration(n, env, fix_spaces(alg, env))
         env_fixed = gauge_fix(env′, env, gauge_alg)
         env_diff = calc_elementwise_convergence(env, env_fixed)
         @info "Diff between iters = $(env_diff)"

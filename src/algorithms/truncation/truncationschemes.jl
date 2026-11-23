@@ -18,7 +18,7 @@ in `InfinitePEPS`, `InfinitePEPO` (`2 × rows × cols`):
     If it is a `TruncationSpace`, the space refers to the north domain of
     `[r, c]` or its `flip`, whichever is non-dual.
 
-or for each environment bond of a `CTMRGEnv` (`4 × rows × cols`, `SimultaneousCTMRG` only):
+or for each environment bond of a `CTMRGEnv` (`4 × rows × cols`, `SimultaneousCTMRG` and `SequentialCTMRG` only):
 - `trunc[dir, r, c]` applies to the bond of the first virtual space of `env.edges[dir, r, c]`.
     If it is a `TruncationSpace`, the space refers to that space or its `flip`,
     whichever is non-dual.
@@ -120,19 +120,27 @@ function _rot180_trunc_y(trunc_y::AbstractMatrix{<:TruncationStrategy})
     return trunc_y_
 end
 
+# environment bonds rotate like the edges of a `CTMRGEnv`
+function _rotate_env_truncs(rot, shift::Int, truncs)
+    return SiteDependentTruncation(stack(rot(truncs[mod1(dir + shift, 4), :, :]) for dir in 1:4; dims = 1))
+end
+
 function Base.rotl90(trunc::SiteDependentTruncation)
+    size(trunc.truncs, 1) == 4 && return _rotate_env_truncs(rotl90, 1, trunc.truncs)
     trunc_y = _rotl90_trunc_x(trunc.truncs[1, :, :])
     trunc_x = _rotl90_trunc_y(trunc.truncs[2, :, :])
     trunc = stack((trunc_x, trunc_y); dims = 1)
     return SiteDependentTruncation(trunc)
 end
 function Base.rotr90(trunc::SiteDependentTruncation)
+    size(trunc.truncs, 1) == 4 && return _rotate_env_truncs(rotr90, -1, trunc.truncs)
     trunc_y = _rotr90_trunc_x(trunc.truncs[1, :, :])
     trunc_x = _rotr90_trunc_y(trunc.truncs[2, :, :])
     trunc = stack((trunc_x, trunc_y); dims = 1)
     return SiteDependentTruncation(trunc)
 end
 function Base.rot180(trunc::SiteDependentTruncation)
+    size(trunc.truncs, 1) == 4 && return _rotate_env_truncs(rot180, 2, trunc.truncs)
     trunc_x = _rot180_trunc_x(trunc.truncs[1, :, :])
     trunc_y = _rot180_trunc_y(trunc.truncs[2, :, :])
     trunc = stack((trunc_x, trunc_y); dims = 1)

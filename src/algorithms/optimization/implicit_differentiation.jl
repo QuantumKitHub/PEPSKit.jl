@@ -204,9 +204,9 @@ Evaluating the gradient of the cost function for CTMRG:
 
 _scrambling_env_gauge(::CTMRGAlgorithm) = ScramblingEnvGauge()
 
-function _set_fixed_truncation(alg::CTMRGAlgorithm)
+function _set_fixed_truncation(alg::CTMRGAlgorithm, env)
     alg_fixed = @set alg.projector_alg = _set_truncation(alg.projector_alg, FixedSpaceTruncation())
-    return alg_fixed
+    return fix_spaces(alg_fixed, env)
 end
 
 # compute the CTMRG gradient through fixed-point differentiation
@@ -223,7 +223,7 @@ function _rrule(
     env, = leading_boundary(envinit, state, alg)
 
     # prepare iterating function corresponding to a single gauge-fixed CTMRG iteration
-    alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
+    alg_fixed = _set_fixed_truncation(alg, env) # fix spaces during differentiation
     alg_gauge = _scrambling_env_gauge(alg) # select appropriate gauge-fixing algorithm
     env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
     signs, = compute_gauge_fix_gauge(env_conv, env, alg_gauge)
@@ -475,7 +475,7 @@ function _rrule(
     env, = leading_boundary(envinit, state, alg)
 
     # prepare iterating function corresponding to a single gauge-fixed CTMRG iteration
-    alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
+    alg_fixed = _set_fixed_truncation(alg, env) # fix spaces during differentiation
     alg_gauge = _scrambling_env_gauge(alg) # select appropriate gauge-fixing algorithm
     env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
     signs, corner_phases, edge_phases = compute_gauge_fix_gauge(env_conv, env, alg_gauge)
@@ -622,7 +622,7 @@ function PEPSKit._rrule(
     env, = leading_boundary(envinit, state, alg)
 
     # gauge-fix SVD isometries
-    alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
+    alg_fixed = _set_fixed_truncation(alg, env) # fix spaces during differentiation
     env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
     signs, = compute_gauge_fix_gauge(env_conv, env, ScramblingEnvGauge())
     S = normalize.(info.S)

@@ -58,7 +58,7 @@ Compute the C₄ᵥ projector from `eigh` decomposing the Hermitian `enlarged_co
 Return the projector and decomposition diagnostics used to renormalize the corner.
 """
 function c4v_projector!(enlarged_corner, alg::C4vEighProjector)
-    alg = _set_decomposition_truncation(alg, truncation_strategy(alg, enlarged_corner))
+    alg = _set_decomposition_truncation(alg, truncation_strategy(alg))
     eigh_alg = decomposition_algorithm(alg)
 
     D, V, truncation_error = eigh_trunc!(enlarged_corner, eigh_alg)

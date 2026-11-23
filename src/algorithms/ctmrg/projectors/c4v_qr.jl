@@ -35,6 +35,7 @@ end
 # no truncation
 _set_truncation(alg::C4vQRProjector, ::TruncationStrategy) = alg
 _set_decomposition_truncation(alg::C4vQRProjector, ::TruncationStrategy) = alg
+fix_spaces(alg::C4vQRProjector, env) = alg
 
 """
 Compute the column-enlarged northwest corner for C₄ᵥ QR-CTMRG.
