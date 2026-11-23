@@ -1,11 +1,13 @@
 """
-    cost_function(peps::InfinitePEPS, env, O::LocalOperator)
+    cost_function(peps::InfinitePEPS, env, O::LocalOperator; allocator)
 
 Real part of expectation value of `O`, used as the cost function in variational PEPS optimization.
 Prints a warning if the expectation value yields a finite imaginary part (up to a tolerance).
 """
-function cost_function(peps::InfinitePEPS, env, O::LocalOperator)
-    E = MPSKit.expectation_value(peps, O, env)
+function cost_function(
+        peps::InfinitePEPS, env, O::LocalOperator; allocator = scheduler_allocator(peps)
+    )
+    E = MPSKit.expectation_value(peps, O, env; allocator)
     ignore_derivatives() do
         isapprox(imag(E), 0; atol = sqrt(eps(real(E)))) ||
             @warn "Expectation value is not real: $E."
@@ -17,15 +19,16 @@ end
 # the tapes of all terms are kept until the pullback
 function ChainRulesCore.rrule(
         config::RuleConfig{>:HasReverseMode}, ::typeof(cost_function),
-        peps::InfinitePEPS, env::AbstractCTMRGEnv, O::LocalOperator
+        peps::InfinitePEPS, env::AbstractCTMRGEnv, O::LocalOperator;
+        allocator = scheduler_allocator(peps)
     )
     # inference barrier for the abstract scheduler, as in the `dtmap` rrule
-    return Base.inferencebarrier(_cost_function_rrule)(config, peps, env, O, Defaults.scheduler[])
+    return Base.inferencebarrier(_cost_function_rrule)(config, peps, env, O, Defaults.scheduler[], allocator)
 end
-function _cost_function_rrule(config, peps, env, O, scheduler)
+function _cost_function_rrule(config, peps, env, O, scheduler, allocator)
     checklattice(peps, O, peps)
     E, ∂peps, ∂env = tmapreduce(_add_terms, collect(O.terms); scheduler) do (inds, operator)
-        e, term_pullback = rrule_via_ad(config, (ψ, ε) -> local_expectation_value(inds, ψ, operator, ψ, ε), peps, env)
+        e, term_pullback = rrule_via_ad(config, (ψ, ε) -> local_expectation_value(inds, ψ, operator, ψ, ε, allocator), peps, env)
         _, ∂ψ, ∂ε = term_pullback(one(real(e))) # gradient of real(e)
         return e, unthunk(∂ψ), unthunk(∂ε)
     end
@@ -329,7 +332,7 @@ function fixedpoint(
                 alg.reuse_env && update!(env, env′)
                 tracked_finalizer.contraction_metrics[end] = info.contraction_metrics
             end
-            return cost_function(ψ, env′, operator)
+            return cost_function(ψ, env′, operator; allocator)
         end
         g = peps_project_tangent(only(gs), peps)
         tracked_finalizer.gradnorms_unitcell[end] = norm.(unitcell(g))
