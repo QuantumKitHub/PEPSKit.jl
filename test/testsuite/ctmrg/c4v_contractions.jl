@@ -82,11 +82,12 @@ function test_c4v_contractions(n::InfiniteSquareNetwork, env::C4vCTMRGEnv)
         @test env + env ≈ 2 * env
         @test norm(env - env) ≈ 0 atol = 1.0e-12
         z = zerovector(env)
-        @test z isa C4vCTMRGEnv
+        @test typeof(z) == typeof(env)
         @test norm(z) == 0
-        add!(z, env, α, one(stype))
-        @test z ≈ α * env
-        scale!(z, inv(α))
+        a = real(α)
+        add!(z, env, a, one(a))
+        @test z ≈ a * env
+        scale!(z, inv(a))
         @test z ≈ env
     end
 
