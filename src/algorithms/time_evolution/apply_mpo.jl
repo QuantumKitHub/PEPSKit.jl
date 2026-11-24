@@ -111,8 +111,28 @@ Then the fidelity is just
     F(ψ̃) = (norm(s̃[n], 2) / norm(s[n], 2))^2
 ```
 =#
+
+# TensorKit skips forming Q when the corresponding output is zero-dimensional.
+function _qr_r!(A::TensorMap)
+    V = infimum(fuse(codomain(A)), fuse(domain(A)))
+    V0 = zerospace(spacetype(A))
+    Q0 = similar(A, V0 ← V0)
+    R = similar(A, V ← domain(A))
+    left_orth!(A, (Q0, R); positive = true)
+    return R
+end
+
+function _lq_l!(A::TensorMap)
+    V = infimum(fuse(codomain(A)), fuse(domain(A)))
+    V0 = zerospace(spacetype(A))
+    Q0 = similar(A, V0 ← V0)
+    L = similar(A, codomain(A) ← V)
+    right_orth!(A, (L, Q0); positive = true)
+    return L
+end
+
 """
-Perform QR decomposition through a `GenericMPSTensor`
+Return the triangular factor `R` from a QR decomposition through a `GenericMPSTensor`.
 ```
              ╱            ╱
     -←-R0-←-M-←-  =>  ---Q-←-R1-←-
@@ -131,7 +151,7 @@ function qr_through(
     TC = promote_type(scalartype(R0), scalartype(M))
     A = tensoralloc_contract(TC, R0, pR, false, M, pM, false, pRM, Val(true), allocator)
     tensorcontract!(A, R0, pR, false, M, pM, false, pRM, One(), Zero(), DefaultBackend(), allocator)
-    _, r = left_orth!(A; positive = true)
+    r = _qr_r!(A)
     tensorfree!(A, allocator)
     allocator_reset!(allocator, cp)
     normalize && normalize!(r, Inf)
@@ -142,13 +162,13 @@ function qr_through(
         ::Nothing, M::GenericMPSTensor{S, N}; normalize::Bool = true, allocator = DefaultAllocator()
     ) where {S, N}
     @assert !isdual(domain(M, 1))
-    _, r = left_orth(M; positive = true)
+    r = _qr_r!(MatrixAlgebraKit.copy_input(qr_compact, M))
     normalize && normalize!(r, Inf)
     return r
 end
 
 """
-Perform LQ decomposition through a `GenericMPSTensor`
+Return the triangular factor `L` from an LQ decomposition through a `GenericMPSTensor`.
 ```
              ╱            ╱
     -←-L0-←-Q-←-  <=  -←-M-←-L1-←-
@@ -167,7 +187,7 @@ function lq_through(
     TC = promote_type(scalartype(M), scalartype(L1))
     A = tensoralloc_contract(TC, M, pM, false, L1, pL, false, pML, Val(true), allocator)
     tensorcontract!(A, M, pM, false, L1, pL, false, pML, One(), Zero(), DefaultBackend(), allocator)
-    l, _ = right_orth!(A; positive = true)
+    l = _lq_l!(A)
     tensorfree!(A, allocator)
     allocator_reset!(allocator, cp)
     normalize && normalize!(l, Inf)
@@ -179,7 +199,7 @@ function lq_through(
     ) where {S, N}
     @assert !isdual(codomain(M, 1))
     A = permute(M, ((1,), ntuple(i -> i + 1, N)); copy = true)
-    l, _ = right_orth!(A; positive = true)
+    l = _lq_l!(A)
     normalize && normalize!(l, Inf)
     return l
 end
