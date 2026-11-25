@@ -10,6 +10,16 @@ dtmap(args...; scheduler = Defaults.scheduler[]) = tmap(args...; scheduler)
 
 dtmap!!(args...; scheduler = Defaults.scheduler[]) = tmap!(args...; scheduler)
 
+# make this serial for now so that Enzyme can differentiate it. Once
+# https://github.com/EnzymeAD/Enzyme/pull/3152 is merged and the new
+# JLL is built, restore the old version
+function dtmap!!(f, dst::AbstractArray, src::AbstractArray; scheduler = Defaults.scheduler[])
+    for (i, a) in zip(eachindex(dst), src)
+        dst[i] = f(a)
+    end
+    return dst
+end
+
 # Follows the `map` rrule from ChainRules.jl but specified for the case of one AbstractArray that is being mapped
 # https://github.com/JuliaDiff/ChainRules.jl/blob/e245d50a1ae56ce46fc8c1f0fe9b925964f1146e/src/rulesets/Base/base.jl#L243
 function ChainRulesCore.rrule(
