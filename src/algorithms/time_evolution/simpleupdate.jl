@@ -100,12 +100,12 @@ function _su_iter!(
     ϵ = 0.0
     local S
     for gate_ax in 1:numout(T₁)
-        Q₁, R₁, p₁ = _bond_qr(T₁, k₁, gate_ax, allocator)
-        Q₂, R₂, p₂ = _bond_qr(T₂, k₂, gate_ax, allocator)
-        U, S, Vᴴ, ϵ′ = _apply_bond_gate(R₁, R₂, gate, trunc, allocator)
+        X, a = bond_tensor_end(T₁, k₁; gate_ax, allocator, positive = true)
+        Y, b = bond_tensor_end(T₂, k₂; gate_ax, allocator, positive = true)
+        a, S, b, ϵ′ = _apply_bond_gate(a, b, gate, trunc, allocator)
         ϵ = max(ϵ, ϵ′)
-        T₁ = _undo_bond_qr(Q₁, U, ((1,), (2, 3)), p₁, allocator)
-        T₂ = _undo_bond_qr(Q₂, Vᴴ, ((2,), (3, 1)), p₂, allocator)
+        T₁ = undo_bond_tensor_end(a, X, k₁; gate_ax, allocator)
+        T₂ = undo_bond_tensor_end(b, Y, k₂; gate_ax, allocator)
         alg.purified && break # only apply gate to 1st physical leg
     end
     # remove environment weights

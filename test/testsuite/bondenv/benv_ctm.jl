@@ -4,6 +4,7 @@ using PEPSKit
 using LinearAlgebra
 using Random
 using Adapt
+using PEPSKit: EAST, WEST
 
 Nr, Nc = 2, 2
 Envspace = Vect[FermionParity ⊠ U1Irrep](
@@ -41,8 +42,10 @@ function test_benv_ctm(AT, state::Union{InfinitePEPS, InfinitePEPO})
     for row in 1:Nr, col in 1:Nc
         cp1 = col + 1
         A, B = state[row, col], state[row, cp1]
-        a, X = PEPSKit.bond_tensor_first(A)
-        b, Y = PEPSKit.bond_tensor_last(B)
+        X, a = PEPSKit.bond_tensor_end(A, EAST)
+        Y, b = PEPSKit.bond_tensor_end(B, WEST)
+        a = permute(a, ((1, 2), (3,)))
+        b = permute(b, ((3, 2), (1,)))
         benv = PEPSKit.bondenv_ctm(row, col, X, Y, env)
         Z = PEPSKit.positive_approx(benv)
         # verify that gauge fixing can greatly reduce

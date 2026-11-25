@@ -7,12 +7,15 @@ is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
 
 if !is_buildkite
     TestSuite.timeevol_timestep(Vector)
+    TestSuite.timeevol_timestep_ntu(Vector)
 end
 
 if CUDA.functional()
     TestSuite.timeevol_timestep(CuArray)
+    TestSuite.timeevol_timestep_ntu(CuArray)
 end
 
 if AMDGPU.functional()
     TestSuite.timeevol_timestep(ROCArray)
+    TestSuite.timeevol_timestep_ntu(ROCArray)
 end
