@@ -306,7 +306,7 @@ function ChainRulesCore.rrule(
         alg::EighAdjoint{<:TruncatedAlgorithm{<:MatrixAlgebraKit.Algorithm}, <:FullPullback}
     )
 
-    D, V = eigh_full!(t; alg.fwd_alg.alg)
+    D, V = eigh_full(t; alg.fwd_alg.alg)
     (D̃, Ṽ), inds = truncate(eigh_trunc!, (D, V), alg.fwd_alg.trunc)
     truncerror = truncation_error(diagview(D), inds)
 

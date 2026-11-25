@@ -64,6 +64,13 @@ function utility_svd_wrapper(AT)
             @test all(isapprox.(result, f(copy(r), alg)))
         end
 
+        @testset "Reverse rule keeps the input intact $(alg.rrule_alg), $f" for alg in (full_alg, trunc_alg), f in (svd_trunc!, svd_trunc_no_error!)
+            alg = @set alg.fwd_alg = TruncatedAlgorithm(alg.fwd_alg, trunc)
+            t = copy(r)
+            rrule(f, t, alg)
+            @test t == r
+        end
+
         @testset "Gauge tolerance inference $T" for T in (Float32, Float64)
             Δ = (svd_compact(adapt(AT, randn(T, ℂ^3, ℂ^4)))..., ZeroTangent())
             @test (@inferred PEPSKit._get_pullback_gauge_tol(Δ, 1)) === default_pullback_gauge_atol(Δ)
