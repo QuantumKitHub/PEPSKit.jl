@@ -294,8 +294,7 @@ function ChainRulesCore.rrule(
     ) where {F <: TruncatedAlgorithm{<:MatrixAlgebraKit.Algorithm}, R <: FullPullback}
     # TODO: filter out any decomposition algorithm that doesn't give access to the full spectrum
 
-    # requires access to the full decomposition
-    U, S, Vᴴ = svd_compact!(t, alg.fwd_alg.alg)
+    U, S, Vᴴ = svd_compact(t, alg.fwd_alg.alg)
     (Ũ, S̃, Ṽᴴ), inds = truncate(svd_trunc!, (U, S, Vᴴ), alg.fwd_alg.trunc)
     result = f === svd_trunc! ?
         (Ũ, S̃, Ṽᴴ, truncation_error(diagview(S), inds)) : (Ũ, S̃, Ṽᴴ)
