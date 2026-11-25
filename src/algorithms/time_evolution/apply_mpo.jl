@@ -162,7 +162,7 @@ function qr_through(
         ::Nothing, M::GenericMPSTensor{S, N}; normalize::Bool = true, allocator = DefaultAllocator()
     ) where {S, N}
     @assert !isdual(domain(M, 1))
-    r = _qr_r!(MatrixAlgebraKit.copy_input(qr_compact, M))
+    r = _qr_r!(copy(M))
     normalize && normalize!(r, Inf)
     return r
 end
