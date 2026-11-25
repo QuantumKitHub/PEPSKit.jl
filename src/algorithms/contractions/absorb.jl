@@ -60,3 +60,25 @@ function absorb_left_right(
     ) where {S}
     return absorb_right(absorb_left(A, CL), CR)
 end
+
+"""
+    absorb_left_right(A, CL, CR, allocator = DefaultAllocator())
+
+Absorb both matrices into a tensor map with one domain leg and at least one codomain
+leg. Use the allocator for intermediates of the combined contraction.
+"""
+@generated function absorb_left_right(
+        A::AbstractTensorMap{<:Any, S, N, 1},
+        CL::AbstractTensorMap{<:Any, S, 1, 1},
+        CR::AbstractTensorMap{<:Any, S, 1, 1},
+        allocator = DefaultAllocator(),
+    ) where {S, N}
+    physical = ntuple(virtuallabel, N - 1)
+    output = tensorexpr(:result, (envlabel(:out), physical...), (envlabel(:in),))
+    input = tensorexpr(:A, (envlabel(1), physical...), (envlabel(2),))
+    left = tensorexpr(:CL, (envlabel(:out),), (envlabel(1),))
+    right = tensorexpr(:CR, (envlabel(2),), (envlabel(:in),))
+    return macroexpand(
+        @__MODULE__, :(return @autoopt @tensor allocator = allocator $output := $left * $input * $right)
+    )
+end

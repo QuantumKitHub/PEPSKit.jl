@@ -1,0 +1,101 @@
+using Test
+using Random
+using TensorKit
+using PEPSKit
+using Adapt
+using PEPSKit: random_dual!, eachcoordinate, NORTH
+using PEPSKit: @autoopt, _contract_site, absorb_left_right
+
+ds = Dict(
+    U1Irrep => U1Space(i => d for (i, d) in zip(-1:1, (1, 1, 2))),
+    FermionParity => Vect[FermionParity](0 => 2, 1 => 1)
+)
+Ds = Dict(
+    U1Irrep => U1Space(i => D for (i, D) in zip(-1:1, (1, 3, 2))),
+    FermionParity => Vect[FermionParity](0 => 3, 1 => 2)
+)
+χs = Dict(
+    U1Irrep => U1Space(i => D for (i, D) in zip(-1:1, (2, 4, 2))),
+    FermionParity => Vect[FermionParity](0 => 4, 1 => 4)
+)
+
+"""Generate a non-unitary matrix near the identity."""
+function _random_gauge_matrix(V::ElementarySpace)
+    return id(ComplexF64, V) + 0.1 * randn(ComplexF64, V ← V)
+end
+
+"""Test invariance of reduced density matrix under gauge transformations."""
+function ctmrg_gaugetrans(AT)
+    return @testset "CTMRGEnv of InfinitePEPS ($S) ($AT)" for S in keys(ds)
+        d, D, χ, uc = ds[S], Ds[S], χs[S], (2, 3)
+        N, E = random_dual!(fill(D, uc)), random_dual!(fill(D, uc))
+        ψ = adapt(AT, InfinitePEPS(fill(d, uc), N, E))
+        env = CTMRGEnv(ψ, χ)
+        virtual = map(eachcoordinate(ψ, 1:2)) do (dir, r, c)
+            return _random_gauge_matrix(dir == NORTH ? N[r, c] : E[r, c])
+        end
+        boundary = map(edge -> _random_gauge_matrix(space(edge, 1)), env.edges)
+        gauge = adapt(AT, VirtualGaugeTransform(virtual))
+        boundary_gauge = adapt(AT, CTMRGEnvGaugeTransform(boundary))
+        ψg, envg = gauge_transform(ψ, gauge), gauge_transform(env, gauge)
+        envb = gauge_transform(env, boundary_gauge)
+        for (r, c) in eachcoordinate(ψ)
+            inds = [CartesianIndex(r, c)]
+            ρ = reduced_densitymatrix(inds, ψ, env)
+            @test reduced_densitymatrix(inds, ψg, envg) ≈ ρ
+            @test reduced_densitymatrix(inds, ψ, envb) ≈ ρ
+        end
+        if S == FermionParity
+            for (left, right) in ((D, D'), (D', D))
+                corner = adapt(AT, randn(ComplexF64, left ← right))
+                Xout = adapt(AT, _random_gauge_matrix(left))
+                Xin = adapt(AT, _random_gauge_matrix(right))
+                σin = Xin'
+                @autoopt @tensor expected[χ_out; χ_in] :=
+                    Xout[χ_out; χ1] * corner[χ1; χ2] * conj(σin[χ_in; χ2])
+                @test absorb_left_right(corner, Xout, Xin) ≈ expected
+            end
+        end
+    end
+end
+
+"""Test independent PEPO layer gauges through single-layer density matrices."""
+function ctmrg_gaugetrans_pepo(AT)
+    return @testset "PEPO virtual gauges ($S) ($AT)" for S in keys(ds)
+        d, D, χ, uc = ds[S], Ds[S], χs[S], (2, 3, 2)
+        P, N, E = fill(d, uc), fill(D, uc), fill(D, uc)
+        foreach(random_dual!, eachslice(N; dims = 3))
+        foreach(random_dual!, eachslice(E; dims = 3))
+        ρ = adapt(AT, InfinitePEPO(P, N, E))
+        matrices = map(Iterators.product(1:2, axes(P)...)) do (dir, r, c, h)
+            return _random_gauge_matrix(dir == NORTH ? N[r, c, h] : E[r, c, h])
+        end
+        gauge = adapt(AT, VirtualGaugeTransform(matrices))
+        ρg = gauge_transform(ρ, gauge)
+        for h in axes(P, 3)
+            layer, layerg = InfinitePEPO(ρ.A[:, :, h:h]), InfinitePEPO(ρg.A[:, :, h:h])
+            env = CTMRGEnv(InfinitePartitionFunction(layer), χ)
+            layer_gauge = VirtualGaugeTransform(gauge.matrices[:, :, :, h:h], gauge.inverses[:, :, :, h:h])
+            envg = gauge_transform(env, layer_gauge)
+            for (r, c) in Iterators.product(axes(P, 1), axes(P, 2))
+                inds = [CartesianIndex(r, c)]
+                @test reduced_densitymatrix(inds, layerg, envg) ≈ reduced_densitymatrix(inds, layer, env)
+            end
+        end
+    end
+end
+
+"""Test boundary gauge invariance with more than two network-facing edge legs."""
+function ctmrg_gaugetrans_stacked_env(AT)
+    return @testset "Stacked-network boundary gauges ($AT)" begin
+        V = ℂ^2
+        ψ = adapt(AT, InfinitePEPS(V, V))
+        ρ = adapt(AT, InfinitePEPO(V, V; unitcell = (1, 1, 2)))
+        network = InfiniteSquareNetwork(ψ, ρ, ψ)
+        env = CTMRGEnv(network, V)
+        matrices = map(edge -> _random_gauge_matrix(space(edge, 1)), env.edges)
+        gauge = adapt(AT, CTMRGEnvGaugeTransform(matrices))
+        envg = gauge_transform(env, gauge)
+        @test _contract_site((1, 1), network, envg) ≈ _contract_site((1, 1), network, env)
+    end
+end

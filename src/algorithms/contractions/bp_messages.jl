@@ -38,12 +38,3 @@ function contract_west_message(
             M_south[DSb; DSt] * M_west[DWb; DWt] * M_north[DNt; DNb]
     end
 end
-
-absorb_north_message(A::PEPSTensor, M::PEPSMessage) =
-    @tensor A′[d; N' E S W] := A[d; N E S W] * M[N; N']
-absorb_east_message(A::PEPSTensor, M::PEPSMessage) =
-    @tensor A′[d; N E' S W] := A[d; N E S W] * M[E; E']
-absorb_south_message(A::PEPSTensor, M::PEPSMessage) =
-    @tensor A′[d; N E S' W] := A[d; N E S W] * M[S'; S]
-absorb_west_message(A::PEPSTensor, M::PEPSMessage) =
-    @tensor A′[d; N E S W'] := A[d; N E S W] * M[W'; W]

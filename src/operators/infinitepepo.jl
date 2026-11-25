@@ -287,3 +287,27 @@ function _stack_tuples(A::Matrix{NTuple{N, T}}) where {N, T}
     end
     return out
 end
+
+## Gauge transform
+
+"""
+    gauge_transform(ρ::InfinitePEPO, gauge::VirtualGaugeTransform)
+
+Transform the virtual bonds of each layer of `ρ`, leaving its physical legs unchanged.
+The gauge must have shape `(2, rows, cols, layers)`.
+A gauge of shape `(2, rows, cols)` is also accepted for a single-layer PEPO.
+"""
+function gauge_transform(ρ::InfinitePEPO, gauge::VirtualGaugeTransform{4})
+    _check_gauge_size(gauge, size(ρ))
+    A = map(eachcoordinate(ρ)) do (r, c, h)
+        Xn, Xe, Xs, Xw = _virtual_gauge_factors(gauge, r, c, h)
+        return @tensor t[p q; n e s w] := ρ[r, c, h][p q; n′ e′ s′ w′] *
+            Xn[n′; n] * Xe[e′; e] * Xs[s; s′] * Xw[w; w′]
+    end
+    return InfinitePEPO(A)
+end
+function gauge_transform(ρ::InfinitePEPO, gauge::VirtualGaugeTransform{3})
+    size(ρ, 3) == 1 || throw(DimensionMismatch("A multilayer PEPO requires a gauge for every layer"))
+    dims = (size(gauge.matrices)..., 1)
+    return gauge_transform(ρ, VirtualGaugeTransform(reshape(gauge.matrices, dims), reshape(gauge.inverses, dims)))
+end

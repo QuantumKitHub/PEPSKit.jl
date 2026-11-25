@@ -226,12 +226,12 @@ function _rrule(
     alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
     alg_gauge = _scrambling_env_gauge(alg) # select appropriate gauge-fixing algorithm
     env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
-    signs, = compute_gauge_fix_gauge(env_conv, env, alg_gauge)
+    signs = compute_relative_phases(env_conv, env, alg_gauge)
     # `p` for state, `x` for environment
     function gauge_fixed_iteration(p, x)
         # fix global phases relative to the fixed point inside the iteration
         return fix_global_phases(
-            fix_relative_phases(ctmrg_iteration(InfiniteSquareNetwork(p), x, alg_fixed)[1], signs),
+            gauge_transform(ctmrg_iteration(InfiniteSquareNetwork(p), x, alg_fixed)[1], signs),
             env,
         )
     end
@@ -401,11 +401,11 @@ _default_solver_alg(::Type{<:ImplicitGradient}) = Defaults.gradient_implicit_sol
 _select_solver_alg_symbol(::Type{<:ImplicitGradient}, solver_alg) =
     IMPLICIT_SOLVER_SYMBOLS[solver_alg]
 
-function _gauge_fix_c4v_projector(::C4vCTMRG{<:C4vEighProjector}, signs, info)
-    return info.V * signs[1]'
+function _gauge_fix_c4v_projector(::C4vCTMRG{<:C4vEighProjector}, signs::CTMRGEnvGaugeTransform, info)
+    return info.V * signs.inverses[1]
 end
-function _gauge_fix_c4v_projector(::C4vCTMRG{<:C4vQRProjector}, signs, info)
-    return info.Q * signs[1]'
+function _gauge_fix_c4v_projector(::C4vCTMRG{<:C4vQRProjector}, signs::CTMRGEnvGaugeTransform, info)
+    return info.Q * signs.inverses[1]
 end
 
 function _check_algorithm_combination(::SequentialCTMRG, ::ImplicitGradient)
@@ -478,8 +478,8 @@ function _rrule(
     alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
     alg_gauge = _scrambling_env_gauge(alg) # select appropriate gauge-fixing algorithm
     env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
-    signs, corner_phases, edge_phases = compute_gauge_fix_gauge(env_conv, env, alg_gauge)
-    env_fixed = fix_phases(env_conv, signs, corner_phases, edge_phases)
+    signs = compute_relative_phases(env_conv, env, alg_gauge)
+    env_fixed = fix_global_phases(gauge_transform(env_conv, signs), env)
 
     # NOTE: explicitly keeping corner non-diagonal and (possibly) complex, for use in the backwards pass
     C, E = env_fixed.corners[NORTHWEST, 1, 1], env_fixed.edges[NORTH, 1, 1]
@@ -493,7 +493,7 @@ function _rrule(
     # instantiate the differentiable variables corresponding to the intermediate projector of the contraction algorithm
     u = zeros(storagetype(U), space(UL, numind(UL))' ← space(U, numind(U))')
 
-    # prepare pullback of C4v CTMRG environment constructor (artefact of reusing asymmetric environment type for C4v symmetric contraction)
+    # prepare pullback of the C4v CTMRG environment constructor
     _, c4v_env_vjp = rrule_via_ad(config, C4vCTMRGEnv, C, E)
 
     # Two tapes: the linear solve only uses the environment cotangents, so reading the
@@ -624,7 +624,7 @@ function PEPSKit._rrule(
     # gauge-fix SVD isometries
     alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
     env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
-    signs, = compute_gauge_fix_gauge(env_conv, env, ScramblingEnvGauge())
+    signs = compute_relative_phases(env_conv, env, ScramblingEnvGauge())
     S = normalize.(info.S)
     U, V = fix_relative_phases(info.U, info.V, signs)
 

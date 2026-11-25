@@ -35,4 +35,18 @@ function Adapt.adapt_structure(to, x::PEPSKit.C4vCTMRGEnv{C, T}) where {C, T}
     return C4vCTMRGEnv{eltype(C′), eltype(T′)}(C′, T′)
 end
 
+function Adapt.adapt_structure(to, gauge::VirtualGaugeTransform)
+    adapt_tensor = Base.Fix1(adapt, to)
+    return VirtualGaugeTransform(
+        map(adapt_tensor, gauge.matrices), map(adapt_tensor, gauge.inverses)
+    )
+end
+
+function Adapt.adapt_structure(to, gauge::CTMRGEnvGaugeTransform)
+    adapt_tensor = Base.Fix1(adapt, to)
+    return CTMRGEnvGaugeTransform(
+        map(adapt_tensor, gauge.matrices), map(adapt_tensor, gauge.inverses)
+    )
+end
+
 end
