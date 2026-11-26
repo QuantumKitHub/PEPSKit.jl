@@ -6,7 +6,7 @@ using Adapt
 using PEPSKit: eachcoordinate, _next_coordinate
 using PEPSKit: EnlargedCorner, HalfInfiniteEnv, FullInfiniteEnv
 using PEPSKit: half_infinite_environment, full_infinite_environment
-using PEPSKit: simultaneous_projectors, contract_projectors
+using PEPSKit: simultaneous_projectors, contract_projectors, fix_spaces
 using PEPSKit: renormalize_northwest_corner, renormalize_northeast_corner,
     renormalize_southeast_corner, renormalize_southwest_corner
 using PEPSKit: random_start_vector
@@ -117,11 +117,11 @@ function test_contractions(n::InfiniteSquareNetwork, env::CTMRGEnv)
 
     # SVD half and full infinite environments
     (P_left_half, P_right_half), info_half = simultaneous_projectors(
-        dense_enlarged_corners, env, HalfInfiniteProjector()
+        dense_enlarged_corners, env, fix_spaces(HalfInfiniteProjector(), env)
     )
     U_half, S_half, V_half = info_half.U, info_half.S, info_half.V
     (P_left_full, P_right_full), info_full = simultaneous_projectors(
-        dense_enlarged_corners, env, FullInfiniteProjector()
+        dense_enlarged_corners, env, fix_spaces(FullInfiniteProjector(), env)
     )
     U_full, S_full, V_full = info_full.U, info_full.S, info_full.V
 

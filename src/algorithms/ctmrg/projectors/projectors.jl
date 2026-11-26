@@ -57,14 +57,31 @@ Return the tensor decomposition algorithm of the `alg` projector algorithm.
 """
 decomposition_algorithm(alg::ProjectorAlgorithm) = alg.decomposition_alg
 
-function truncation_strategy(alg::ProjectorAlgorithm, edge)
+function truncation_strategy(alg::ProjectorAlgorithm, coordinate = nothing)
     if alg.trunc isa FixedSpaceTruncation
-        tspace = space(edge, 1)
-        return isdual(tspace) ? truncspace(flip(tspace)) : truncspace(tspace)
+        throw(ArgumentError("`FixedSpaceTruncation` must be replaced by the current spaces of the environment first, see `fix_spaces`"))
+    elseif alg.trunc isa SiteDependentTruncation
+        (size(alg.trunc.truncs, 1) == 4 && !isnothing(coordinate)) || throw(
+            ArgumentError("CTMRG supports a `SiteDependentTruncation` of the environment bonds (4 × rows × cols) with `SimultaneousCTMRG` and `SequentialCTMRG` only")
+        )
+        return alg.trunc[coordinate...]
     else
         return alg.trunc
     end
 end
+
+# replace a `FixedSpaceTruncation` by a truncation to the current spaces of the environment bonds
+fix_spaces(alg::CTMRGAlgorithm, env) =
+    @set alg.projector_alg = fix_spaces(alg.projector_alg, env)
+function fix_spaces(alg::ProjectorAlgorithm, env)
+    alg.trunc isa FixedSpaceTruncation || return alg
+    return _set_truncation(alg, _fixedspace_truncation(env))
+end
+_fixedspace_truncation(env::CTMRGEnv) =
+    SiteDependentTruncation(map(e -> _nondual_truncspace(space(e, 1)), env.edges))
+_fixedspace_truncation(env::C4vCTMRGEnv) = _nondual_truncspace(space(edge(env, WEST, 1, 1), 1))
+_nondual_truncspace(V) = truncspace(isdual(V) ? flip(V) : V)
+@non_differentiable fix_spaces(args...)
 
 """
     _set_truncation(alg::ProjectorAlgorithm, trunc::TruncationStrategy)

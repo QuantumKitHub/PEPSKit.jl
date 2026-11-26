@@ -155,7 +155,7 @@ function test_c4v_ctmrg_contractions(AT, P, V, Venv)
         env₀ = initialize_random_c4v_env(peps, Venv)
         for projector_alg in (:C4vEighProjector, :C4vQRProjector)
             alg = C4vCTMRG(; projector_alg)
-            env, = PEPSKit.ctmrg_iteration(n, env₀, alg)
+            env, = PEPSKit.ctmrg_iteration(n, env₀, PEPSKit.fix_spaces(alg, env₀))
             @test env isa C4vCTMRGEnv
             test_c4v_contractions(n, env)
         end

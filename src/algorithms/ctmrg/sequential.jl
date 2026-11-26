@@ -68,9 +68,17 @@ function ctmrg_iteration(network, env::CTMRGEnv, alg::SequentialCTMRG)
         end
         network = rotate_north(network, EAST)
         env = rotate_north(env, EAST)
+        alg = @set alg.projector_alg = _rotl90_truncation(alg.projector_alg)
     end
     return env, (; contraction_metrics = (; truncation_error))
 end
+
+# site-dependent truncations rotate along with the environment
+function _rotl90_truncation(alg::ProjectorAlgorithm)
+    alg.trunc isa SiteDependentTruncation || return alg
+    return _set_truncation(alg, rotl90(alg.trunc))
+end
+@non_differentiable _rotl90_truncation(args...)
 
 """
     sequential_projectors(col::Int, network, env::CTMRGEnv, alg::ProjectorAlgorithm)
@@ -96,7 +104,7 @@ function sequential_projectors(
     )
     _, r, c = coordinate
     r′ = r - 1
-    trunc = truncation_strategy(alg, edge(env, WEST, r′, c))
+    trunc = truncation_strategy(alg, (WEST, r′, c))
     alg´ = _set_decomposition_truncation(alg, trunc)
     Q1 = TensorMap(EnlargedCorner(network, env, (SOUTHWEST, r, c)))
     Q2 = TensorMap(EnlargedCorner(network, env, (NORTHWEST, r′, c)))
@@ -109,7 +117,7 @@ function sequential_projectors(
     coordinate_nw = _next_coordinate(coordinate, rowsize, colsize)
     coordinate_ne = _next_coordinate(coordinate_nw, rowsize, colsize)
     coordinate_se = _next_coordinate(coordinate_ne, rowsize, colsize)
-    trunc = truncation_strategy(alg, env.edges[WEST, coordinate_nw[2:3]...])
+    trunc = truncation_strategy(alg, (WEST, coordinate_nw[2:3]...))
     alg´ = _set_decomposition_truncation(alg, trunc)
     ec = (
         TensorMap(EnlargedCorner(network, env, coordinate_se)),

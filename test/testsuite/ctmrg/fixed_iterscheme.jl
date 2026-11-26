@@ -13,7 +13,8 @@ using PEPSKit:
     fix_relative_phases,
     calc_elementwise_convergence,
     peps_normalize,
-    ScramblingEnvGauge
+    ScramblingEnvGauge,
+    fix_spaces
 using PEPSKit.Defaults: ctmrg_tol
 
 # initialize parameters
@@ -39,9 +40,10 @@ function ctmrg_fixed_iterscheme_asymmetric(AT; svd_alg = :DivideAndConquer)
         n = InfiniteSquareNetwork(psi)
 
         env_conv1, = leading_boundary(CTMRGEnv(psi, ComplexSpace(χ)), psi, ctm_alg)
+        ctm_alg_fixed = fix_spaces(ctm_alg, env_conv1)
 
         # do extra iteration and gauge fix
-        env_conv2, = @testinferred ctmrg_iteration(n, env_conv1, ctm_alg)
+        env_conv2, = @testinferred ctmrg_iteration(n, env_conv1, ctm_alg_fixed)
         env_fixed = gauge_fix(env_conv2, env_conv1, ScramblingEnvGauge())
         @test calc_elementwise_convergence(env_conv1, env_fixed) ≈ 0 atol = atol
 
@@ -49,7 +51,7 @@ function ctmrg_fixed_iterscheme_asymmetric(AT; svd_alg = :DivideAndConquer)
         signs, corner_phases, edge_phases =
             compute_gauge_fix_gauge(env_conv2, env_conv1, ScramblingEnvGauge())
         gauge_fixed_iteration(env::CTMRGEnv) = fix_phases(
-            ctmrg_iteration(n, env, ctm_alg)[1],
+            ctmrg_iteration(n, env, ctm_alg_fixed)[1],
             signs, corner_phases, edge_phases,
         )
 
@@ -82,9 +84,10 @@ function ctmrg_fixed_iterscheme_c4v(AT; eigh_alg = :QRIteration)
 
         env₀ = initialize_random_c4v_env(psi, ComplexSpace(χ))
         env_conv1, info = leading_boundary(env₀, psi, ctm_alg)
+        ctm_alg_fixed = fix_spaces(ctm_alg, env_conv1)
 
         # do extra iteration to check gauge fixing
-        env_conv2, info = @testinferred ctmrg_iteration(n, env_conv1, ctm_alg) # CHECK
+        env_conv2, info = @testinferred ctmrg_iteration(n, env_conv1, ctm_alg_fixed) # CHECK
 
         env_fixed = gauge_fix(env_conv2, env_conv1, ScramblingEnvGauge())
         env_diff = calc_elementwise_convergence(env_conv1, env_fixed)
@@ -95,7 +98,7 @@ function ctmrg_fixed_iterscheme_c4v(AT; eigh_alg = :QRIteration)
         signs, corner_phases, edge_phases =
             compute_gauge_fix_gauge(env_conv2, env_conv1, ScramblingEnvGauge())
         gauge_fixed_iteration(env::PEPSKit.AbstractCTMRGEnv) = fix_phases(
-            ctmrg_iteration(n, env, ctm_alg)[1],
+            ctmrg_iteration(n, env, ctm_alg_fixed)[1],
             signs, corner_phases, edge_phases,
         )
 
@@ -119,13 +122,15 @@ function ctmrg_fixed_iterscheme_divide_and_conquer(AT)
         n = InfiniteSquareNetwork(psi)
         env₀ = CTMRGEnv(psi, ComplexSpace(χ))
         env_conv1, = leading_boundary(env₀, psi, ctm_alg_iter)
+        ctm_alg_iter_fixed = fix_spaces(ctm_alg_iter, env_conv1)
+        ctm_alg_full_fixed = fix_spaces(ctm_alg_full, env_conv1)
 
         # do extra iteration to get gauge fixing
-        env_conv2_iter, info_iter = @testinferred ctmrg_iteration(n, env_conv1, ctm_alg_iter)
+        env_conv2_iter, info_iter = @testinferred ctmrg_iteration(n, env_conv1, ctm_alg_iter_fixed)
         env_fix_iter = gauge_fix(env_conv2_iter, env_conv1, ScramblingEnvGauge())
         @test calc_elementwise_convergence(env_conv1, env_fix_iter) ≈ 0 atol = atol
 
-        env_conv2_full, info_full = @testinferred ctmrg_iteration(n, env_conv1, ctm_alg_full)
+        env_conv2_full, info_full = @testinferred ctmrg_iteration(n, env_conv1, ctm_alg_full_fixed)
         env_fix_full = gauge_fix(env_conv2_full, env_conv1, ScramblingEnvGauge())
         @test calc_elementwise_convergence(env_conv1, env_fix_full) ≈ 0 atol = atol
 
@@ -133,13 +138,13 @@ function ctmrg_fixed_iterscheme_divide_and_conquer(AT)
         signs_iter, corner_phases_iter, edge_phases_iter =
             compute_gauge_fix_gauge(env_conv2_iter, env_conv1, ScramblingEnvGauge())
         gauge_fixed_iteration_iter(env::CTMRGEnv) = fix_phases(
-            ctmrg_iteration(n, env, ctm_alg_iter)[1],
+            ctmrg_iteration(n, env, ctm_alg_iter_fixed)[1],
             signs_iter, corner_phases_iter, edge_phases_iter,
         )
         signs_full, corner_phases_full, edge_phases_full =
             compute_gauge_fix_gauge(env_conv2_full, env_conv1, ScramblingEnvGauge())
         gauge_fixed_iteration_full(env::CTMRGEnv) = fix_phases(
-            ctmrg_iteration(n, env, ctm_alg_full)[1],
+            ctmrg_iteration(n, env, ctm_alg_full_fixed)[1],
             signs_full, corner_phases_full, edge_phases_full,
         )
 
