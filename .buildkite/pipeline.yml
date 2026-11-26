@@ -29,8 +29,11 @@ steps:
           - "bondenv"
           - "bp"
           - "compress"
-          - "ctmrg"
-          - "gradients"
+          # ctmrg and gradients currently fail on every build on CUDA (Zygote
+          # differentiating into CUDA's `cufunction` from the GPU QR path);
+          # re-enable once fixed (see #482).
+          #- "ctmrg"
+          #- "gradients"
           - "timeevol"
           - "toolbox"
           - "utility"
