@@ -110,6 +110,13 @@ function utility_svd_wrapper(AT)
             @test all(isapprox.(result, f(copy(r), alg)))
         end
 
+        @testset "Reverse rule keeps the input intact $(alg.rrule_alg), $f" for alg in (full_alg, trunc_alg), f in (svd_trunc!, svd_trunc_no_error!)
+            alg = @set alg.fwd_alg = TruncatedAlgorithm(alg.fwd_alg, trunc)
+            t = copy(r)
+            rrule(f, t, alg)
+            @test t == r
+        end
+
         @testset "Gauge tolerance inference $T" for T in (Float32, Float64)
             Δ = (svd_compact(adapt(AT, randn(T, ℂ^3, ℂ^4)))..., ZeroTangent())
             @test (@inferred PEPSKit._get_pullback_gauge_tol(Δ, 1)) === default_pullback_gauge_atol(Δ)
@@ -121,6 +128,17 @@ function utility_svd_wrapper(AT)
             gradient = only(Zygote.gradient(A -> lossfun(f, A, alg, R, krylov_trunc), r))
             reference = only(Zygote.gradient(A -> lossfun(f, A, full_alg, R, krylov_trunc), r))
             @test gradient ≈ reference rtol = rtol
+        end
+
+        @testset "Thunked cotangents $reverse, $f" for reverse in (:FullPullback, :TruncPullback, :GMRES, :Arnoldi, :BiCGStab), f in (svd_trunc!, svd_trunc_no_error!)
+            alg = SVDAdjoint(; rrule_alg = (; alg = reverse))
+            alg = @set alg.fwd_alg = TruncatedAlgorithm(alg.fwd_alg, krylov_trunc)
+            result, pb = @inferred rrule(f, copy(r), alg)
+            cot = (ZeroTangent(), 2result[2], ZeroTangent())
+            reference = (@inferred pb(cot))[2]
+            wrapped = Tangent{Any}(map(x -> Thunk(() -> x), cot)...)
+            @test (@inferred pb(Thunk(() -> cot)))[2] ≈ reference rtol = rtol
+            @test (@inferred pb(Thunk(() -> wrapped)))[2] ≈ reference rtol = rtol
         end
 
         @testset "Truncated SVD broadening for $f, $(alg.rrule_alg)" for f in (svd_trunc, svd_trunc_no_error), alg in [full_alg, trunc_alg]

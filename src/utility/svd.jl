@@ -337,14 +337,13 @@ function ChainRulesCore.rrule(
     ) where {F <: TruncatedAlgorithm{<:MatrixAlgebraKit.Algorithm}, R <: FullPullback}
     # TODO: filter out any decomposition algorithm that doesn't give access to the full spectrum
 
-    # requires access to the full decomposition
-    U, S, Vᴴ = svd_compact!(t, alg.fwd_alg.alg)
+    U, S, Vᴴ = svd_compact(t, alg.fwd_alg.alg)
     (Ũ, S̃, Ṽᴴ), inds = truncate(svd_trunc!, (U, S, Vᴴ), alg.fwd_alg.trunc)
     result = f === svd_trunc! ?
         (Ũ, S̃, Ṽᴴ, truncation_error(diagview(S), inds)) : (Ũ, S̃, Ṽᴴ)
 
-    function svd_trunc!_full_pullback(ΔUSVᴴ′)
-        ΔUSVᴴ = map(unthunk, ChainRulesCore.backing(ΔUSVᴴ′))
+    function svd_trunc!_full_pullback((ΔU, ΔS, ΔVᴴ))
+        ΔUSVᴴ = map(unthunk, (ΔU, ΔS, ΔVᴴ))
         Δt = svd_pullback!(
             zeros(storagetype(t), space(t)), t, (U, S, Vᴴ), ΔUSVᴴ, inds;
             gauge_atol = _get_pullback_gauge_tol(ΔUSVᴴ, alg.rrule_alg.verbosity), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
@@ -387,8 +386,8 @@ end
 
 # Shared reverse pass wrapping MatrixAlgebraKit's svd_trunc_pullback! (also works for IterSVD).
 function _svd_pullback(t, alg::SVDAdjoint{F, <:TruncPullback}, (U, S, Vᴴ)) where {F}
-    function svd_trunc!_trunc_pullback(ΔUSVᴴ′)
-        ΔUSVᴴ = map(unthunk, ChainRulesCore.backing(ΔUSVᴴ′))
+    function svd_trunc!_trunc_pullback((ΔU, ΔS, ΔVᴴ))
+        ΔUSVᴴ = map(unthunk, (ΔU, ΔS, ΔVᴴ))
         Δf = svd_trunc_pullback!(
             zeros(storagetype(t), space(t)), t, (U, S, Vᴴ), ΔUSVᴴ;
             gauge_atol = _get_pullback_gauge_tol(ΔUSVᴴ, alg.rrule_alg.verbosity), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
@@ -411,9 +410,9 @@ function _svd_pullback(
     proper_tol = clamp(alg.rrule_alg.tol, eps(scalartype(S))^(3 / 4), 1.0e-2 * smallest_sval)
     rrule_alg = @set $(alg.rrule_alg).tol = proper_tol
 
-    function svd_trunc!_itersvd_pullback(ΔUSVᴴ′)
+    function svd_trunc!_itersvd_pullback((ΔU, ΔS, ΔVᴴ))
         Δf = similar(f)
-        ΔU, ΔS, ΔVᴴ, = map(unthunk, ChainRulesCore.backing(ΔUSVᴴ′))
+        ΔU, ΔS, ΔVᴴ, = map(unthunk, (ΔU, ΔS, ΔVᴴ))
 
         for (c, b) in blocks(Δf)
             Uc, Sc, Vᴴc = block(U, c), block(S, c), block(Vᴴ, c)

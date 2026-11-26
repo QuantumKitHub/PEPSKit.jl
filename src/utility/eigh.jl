@@ -306,11 +306,12 @@ function ChainRulesCore.rrule(
         alg::EighAdjoint{<:TruncatedAlgorithm{<:MatrixAlgebraKit.Algorithm}, <:FullPullback}
     )
 
-    D, V = eigh_full!(t; alg.fwd_alg.alg)
+    D, V = eigh_full(t; alg.fwd_alg.alg)
     (D̃, Ṽ), inds = truncate(eigh_trunc!, (D, V), alg.fwd_alg.trunc)
     truncerror = truncation_error(diagview(D), inds)
 
-    function eigh_trunc!_full_pullback(ΔDV)
+    function eigh_trunc!_full_pullback((ΔD, ΔV))
+        ΔDV = map(unthunk, (ΔD, ΔV))
         Δt = eigh_pullback!(
             zeros(storagetype(t), space(t)), t, (D, V), ΔDV, inds;
             gauge_atol = _get_pullback_gauge_tol(ΔDV, alg.rrule_alg.verbosity), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
@@ -333,7 +334,8 @@ function ChainRulesCore.rrule(
     ) where {F, R <: TruncPullback}
     D, V, truncerror = eigh_trunc(t, alg)
 
-    function eigh_trunc!_trunc_pullback(ΔDV)
+    function eigh_trunc!_trunc_pullback((ΔD, ΔV))
+        ΔDV = map(unthunk, (ΔD, ΔV))
         Δf = eigh_trunc_pullback!(
             zeros(storagetype(t), space(t)), t, (D, V), ΔDV;
             gauge_atol = _get_pullback_gauge_tol(ΔDV, alg.rrule_alg.verbosity), degeneracy_atol = alg.rrule_alg.degeneracy_atol,

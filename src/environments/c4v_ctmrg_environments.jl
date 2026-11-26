@@ -305,6 +305,10 @@ function VI.scalartype(::Type{C4vCTMRGEnv{C, T}}) where {C, T}
     return promote_type(S₁, S₂)
 end
 function VI.zerovector(env::C4vCTMRGEnv, ::Type{S}) where {S <: Number}
+    # The corners can be real while the edges are complex, in which case
+    # `scalartype(env)` is already the right promoted type.
+    S === scalartype(env) &&
+        return C4vCTMRGEnv(map(zerovector, env.corners), map(zerovector, env.edges))
     _zerovector = Base.Fix2(zerovector, S)
     return C4vCTMRGEnv(map(_zerovector, env.corners), map(_zerovector, env.edges))
 end

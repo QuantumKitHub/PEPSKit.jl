@@ -134,6 +134,12 @@ module CTMRGC4vSignBranches
 end
 using .CTMRGC4vSignBranches
 
+module CTMRGC4vKrylovRestart
+    include("ctmrg/c4v_krylov_restart.jl")
+    export ctmrg_c4v_krylov_restart
+end
+using .CTMRGC4vKrylovRestart
+
 module CTMRGGaugeFix
     include("ctmrg/gaugefix.jl")
     export ctmrg_gaugefix_asymmetric, ctmrg_gaugefix_c4v

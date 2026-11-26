@@ -13,6 +13,28 @@ function cost_function(peps::Union{InfinitePEPS, InfinitePEPSTriangular}, env, O
     return real(E)
 end
 
+# the gradient of every term is computed in the forward pass, so that only the gradients and not
+# the tapes of all terms are kept until the pullback
+function ChainRulesCore.rrule(
+        config::RuleConfig{>:HasReverseMode}, ::typeof(cost_function),
+        peps::InfinitePEPS, env::AbstractCTMRGEnv, O::LocalOperator
+    )
+    # inference barrier for the abstract scheduler, as in the `dtmap` rrule
+    return Base.inferencebarrier(_cost_function_rrule)(config, peps, env, O, Defaults.scheduler[])
+end
+function _cost_function_rrule(config, peps, env, O, scheduler)
+    checklattice(peps, O, peps)
+    E, ∂peps, ∂env = tmapreduce(_add_terms, collect(O.terms); scheduler) do (inds, operator)
+        e, term_pullback = rrule_via_ad(config, (ψ, ε) -> local_expectation_value(inds, ψ, operator, ψ, ε), peps, env)
+        _, ∂ψ, ∂ε = term_pullback(one(real(e))) # gradient of real(e)
+        return e, unthunk(∂ψ), unthunk(∂ε)
+    end
+    isapprox(imag(E), 0; atol = sqrt(eps(real(E)))) || @warn "Expectation value is not real: $E."
+    cost_function_pullback(Ē) = NoTangent(), unthunk(Ē) * ∂peps, unthunk(Ē) * ∂env, NoTangent()
+    return real(E), cost_function_pullback
+end
+_add_terms((E₁, ψ₁, e₁), (E₂, ψ₂, e₂)) = (E₁ + E₂, ψ₁ + ψ₂, e₁ + e₂)
+
 """
 $(TYPEDEF)
 
@@ -303,10 +325,9 @@ function fixedpoint(
             g_global = tracked_finalizer.tol_state.gradnorm
         )
         # gradient tolerance is scaled relative to the boundary algorithm's own
-        # (just-updated) effective tolerance, not directly to the gradient norm
-        gradient_alg = adapt_solver(
-            alg.gradient_alg; iter = tracked_finalizer.tol_state.iter, g_global = boundary_alg.tol
-        )
+        # (just-updated) effective tolerance, not directly to the gradient norm; that tolerance
+        # already decays with the iteration, so `iter` is not passed a second time
+        gradient_alg = adapt_solver(alg.gradient_alg; g_global = boundary_alg.tol)
         E, gs = withgradient(peps) do ψ
             env′, info = hook_pullback(
                 leading_boundary, env, ψ, boundary_alg;

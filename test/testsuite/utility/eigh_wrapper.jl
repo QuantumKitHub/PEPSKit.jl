@@ -54,6 +54,21 @@ function utility_eigh_wrapper(AT; default_alg = :QRIteration)
             @test g_trunc[1] ≈ g_iter[1] rtol = rtol
         end
 
+        @testset "Thunked eigen cotangents $(alg.rrule_alg)" for alg in (full_alg, trunc_alg)
+            alg = @set alg.fwd_alg = TruncatedAlgorithm(alg.fwd_alg, trunc)
+            (D, V, _), back = @inferred rrule(eigh_trunc!, copy(r), alg)
+            cot = (2D, zero(V))
+            thunked = Tangent{Any}(map(x -> Thunk(() -> x), cot)...)
+            @test (@inferred back(thunked))[2] ≈ (@inferred back(cot))[2] rtol = rtol
+        end
+
+        @testset "Reverse rule keeps the input intact $(alg.rrule_alg)" for alg in (full_alg, trunc_alg)
+            alg = @set alg.fwd_alg = TruncatedAlgorithm(alg.fwd_alg, trunc)
+            t = copy(r)
+            rrule(eigh_trunc!, t, alg)
+            @test t == r
+        end
+
         @testset "Truncated eigh broadening for $(alg.rrule_alg)" for alg in [full_alg, trunc_alg]
             d, v = eigh_full(r)
             d.data[1:2:n] .= d.data[2:2:n] # make every eigenvalue two-fold degenerate
