@@ -117,6 +117,7 @@ function toolbox_mpo_bookkeeping(AT)
             @test_throws ArgumentError add_term!(deepcopy(left), inds, only(values(right.terms)))
             @test_throws ArgumentError left + right
         end
+        @test !applicable(add_term!, mpo_operator, inds, Any[original_mpo...])
         @test isempty(LocalOperator(lattice, inds => [zero(first(original_mpo)), last(original_mpo)]).terms)
 
         # Unequal physical spaces expose factor reordering during coordinate transformations.
