@@ -206,6 +206,7 @@ _scrambling_env_gauge(::CTMRGAlgorithm) = ScramblingEnvGauge()
 
 function _set_fixed_truncation(alg::CTMRGAlgorithm)
     alg_fixed = @set alg.projector_alg = _set_truncation(alg.projector_alg, FixedSpaceTruncation())
+    alg_fixed = _fix_decomposition_allocation(alg_fixed)
     return alg_fixed
 end
 
@@ -220,12 +221,13 @@ function _rrule(
     )
     _check_algorithm_combination(alg, gradmode)
 
-    env, = leading_boundary(envinit, state, alg)
+    alg = _prepare_ctmrg(alg, envinit)
+    env, info = leading_boundary(envinit, state, alg)
 
     # prepare iterating function corresponding to a single gauge-fixed CTMRG iteration
     alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
     alg_gauge = _scrambling_env_gauge(alg) # select appropriate gauge-fixing algorithm
-    env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
+    env_conv, _ = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
     signs, = compute_gauge_fix_gauge(env_conv, env, alg_gauge)
     # `p` for state, `x` for environment
     function gauge_fixed_iteration(p, x)
@@ -340,7 +342,8 @@ function fixedpoint_gradient(∂E∂x, ∂f, y₀, alg::KrylovKit.KrylovAlgorith
         return (VI.add!!(∂f∂x(y), ∂E∂x, s), s)
     end
     Y₀ = (y₀, one(scalartype(y₀)))
-    _, Ys, info = realeigsolve(augmented_map, Y₀, 1, :LM, alg)
+    which = EigSorter(λ -> abs(λ - one(λ)))
+    _, Ys, info = realeigsolve(augmented_map, Y₀, 1, which, alg)
     if alg.verbosity > 0 && info.converged < 1
         @warn("gradient fixed-point iteration reached maximal number of iterations:", info)
     end
@@ -619,6 +622,7 @@ function PEPSKit._rrule(
         state,
         alg::SimultaneousCTMRG{<:HalfInfiniteProjector},
     )
+    alg = _prepare_ctmrg(alg, envinit)
     env, = leading_boundary(envinit, state, alg)
 
     # gauge-fix SVD isometries

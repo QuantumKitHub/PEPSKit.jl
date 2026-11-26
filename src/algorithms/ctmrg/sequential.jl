@@ -58,6 +58,7 @@ function ctmrg_leftmove(col::Int, network, env::CTMRGEnv, alg::SequentialCTMRG)
 end
 
 function ctmrg_iteration(network, env::CTMRGEnv, alg::SequentialCTMRG)
+    alg = _prepare_ctmrg(alg, env)
     truncation_error = zero(real(scalartype(network)))
     for _ in 1:4 # rotate
         for col in 1:size(network, 2) # left move column-wise
@@ -68,6 +69,7 @@ function ctmrg_iteration(network, env::CTMRGEnv, alg::SequentialCTMRG)
         end
         network = rotate_north(network, EAST)
         env = rotate_north(env, EAST)
+        alg = _rotate_decomposition(alg)
     end
     return env, (; contraction_metrics = (; truncation_error))
 end
@@ -97,7 +99,7 @@ function sequential_projectors(
     _, r, c = coordinate
     r′ = r - 1
     trunc = truncation_strategy(alg, edge(env, WEST, r′, c))
-    alg´ = _set_decomposition_truncation(alg, trunc)
+    alg´ = _set_decomposition_truncation(alg, trunc, coordinate)
     Q1 = TensorMap(EnlargedCorner(network, env, (SOUTHWEST, r, c)))
     Q2 = TensorMap(EnlargedCorner(network, env, (NORTHWEST, r′, c)))
     return compute_projector((Q1, Q2), alg´)
@@ -110,7 +112,7 @@ function sequential_projectors(
     coordinate_ne = _next_coordinate(coordinate_nw, rowsize, colsize)
     coordinate_se = _next_coordinate(coordinate_ne, rowsize, colsize)
     trunc = truncation_strategy(alg, env.edges[WEST, coordinate_nw[2:3]...])
-    alg´ = _set_decomposition_truncation(alg, trunc)
+    alg´ = _set_decomposition_truncation(alg, trunc, coordinate)
     ec = (
         TensorMap(EnlargedCorner(network, env, coordinate_se)),
         TensorMap(EnlargedCorner(network, env, coordinate)),

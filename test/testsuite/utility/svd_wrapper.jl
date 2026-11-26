@@ -124,6 +124,67 @@ function utility_svd_wrapper(AT)
         symm_r = adapt(AT, randn(dtype, symm_space, symm_space))
         symm_R = adapt(AT, randn(dtype, space(symm_r)))
 
+        @testset "Krylov SVD pullbacks" begin
+            for (f, forward, reverse, A, target, truncation) in (
+                    (svd_trunc, :DefaultAlgorithm, :GMRES, r, R, trunc),
+                    (svd_trunc_no_error, :GKL, :GMRES, r', R', trunc),
+                    (svd_trunc, :GKL, :GMRES, symm_r, symm_R, truncspace(Z2Space(0 => symm_m ÷ 2))),
+                    (svd_trunc_no_error, :DefaultAlgorithm, :GMRES, 1.0e-12 * real(r), real(R), trunc),
+                    (svd_trunc_no_error, :DefaultAlgorithm, :Arnoldi, r, R, trunc),
+                    (svd_trunc, :DefaultAlgorithm, :BiCGStab, r, R, trunc),
+                )
+                alg = SVDAdjoint(; fwd_alg = (; alg = forward), rrule_alg = (; alg = reverse, tol = 1.0e-10))
+                alg = @set alg.fwd_alg = TruncatedAlgorithm(alg.fwd_alg, truncation)
+                reference = @set full_alg.fwd_alg = TruncatedAlgorithm(full_alg.fwd_alg, truncation)
+                # Joint and one-sided cotangents exercise different reverse paths.
+                losses = (
+                    (u, s, v) -> real(dot(target, u * v)) + dot(s, s),
+                    (u, s, v) -> real(dot(target * target', u * u')),
+                    (u, s, v) -> real(dot(target' * target, v' * v)),
+                )
+                for loss in (reverse == :GMRES ? losses : Base.tail(losses))
+                    gradient = only(Zygote.gradient(t -> loss(f(t, alg)[1:3]...), A))
+                    exact = only(Zygote.gradient(t -> loss(f(t, reference)[1:3]...), A))
+                    @test gradient ≈ exact rtol = rtol
+                end
+            end
+        end
+
+        @testset "Float32 weak symmetry sector, $T" for T in (Float32, ComplexF32)
+            W = U1Space(0 => 3, 1 => 3)
+            A = zeros(T, W ← W)
+            block(A, U1Irrep(0)) .= Diagonal(Float32[1, 0.1, 0.01])
+            block(A, U1Irrep(1)) .= Diagonal(Float32[2.0e-6, 3.0e-7, 1.0e-7])
+            C = zero(A); block(C, U1Irrep(1))[1, 2] = 1
+            # Analytic response of the leading left singular projector in the weak block.
+            exact = zero(A)
+            block(exact, U1Irrep(1))[2, 1] = 2.0f-6 / (2.0f-6^2 - 3.0f-7^2)
+            block(exact, U1Irrep(1))[1, 2] = 3.0f-7 / (2.0f-6^2 - 3.0f-7^2)
+            A, C, exact = adapt(AT, A), adapt(AT, C), adapt(AT, exact)
+            alg = SVDAdjoint(; rrule_alg = (; alg = :GMRES))
+            alg = @set alg.fwd_alg = TruncatedAlgorithm(alg.fwd_alg, truncspace(U1Space(0 => 1, 1 => 1)))
+            function loss(t)
+                u, _, _, = svd_trunc(t, alg)
+                return real(dot(C, u * u'))
+            end
+            @test only(Zygote.gradient(loss, A)) ≈ exact rtol = 2.0e-5
+        end
+
+        @testset "GMRES null singular values" begin
+            alg = SVDAdjoint(; rrule_alg = (; alg = :GMRES))
+            alg = @set alg.fwd_alg = TruncatedAlgorithm(alg.fwd_alg, notrunc())
+            rankone = adapt(AT, TensorMap(dtype[2; zeros(m * n - 1)], space(r)))
+            for A in (rankone, zero(r))
+                gradient = only(
+                    Zygote.gradient(A) do t
+                        _, s, _, = svd_trunc_no_error(t, alg)
+                        dot(s, s)
+                    end
+                )
+                @test gradient ≈ 2A rtol = rtol
+            end
+        end
+
         @testset "IterSVD of symmetric tensors $f" for f in (svd_trunc, svd_trunc_no_error)
             l_full, g_full = withgradient(A -> lossfun(f, A, full_alg, symm_R), symm_r)
             l_trunc, g_trunc = withgradient(A -> lossfun(f, A, trunc_alg, symm_R), symm_r)
