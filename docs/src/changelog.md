@@ -22,6 +22,8 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Added
 
+- Triangular CTMRG for PEPS and classical partition functions, with onsite and nearest-neighbor PEPS observables and native optimization using `FixedPointGradient`
+- Triangular lattices `InfiniteTriangular`, with optional sublattice rotation (spiral ansatz) via `rotation`, and `InfiniteTriangularThreeSublattice`, together with sheared PEPS unit cells and `rotate_sublattices` for rotating operators and states
 - `TensorKit.storagetype` for `InfinitePEPS`, `InfinitePEPO`, `InfinitePartitionFunction`, `InfiniteSquareNetwork` and `CTMRGEnv` (#429)
 
 ### Changed

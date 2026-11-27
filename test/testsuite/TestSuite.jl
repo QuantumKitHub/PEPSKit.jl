@@ -202,6 +202,12 @@ module ExamplesTFIsing
 end
 using .ExamplesTFIsing
 
+module ExamplesHeisenbergTriangular
+    include("examples/heisenberg_triangular.jl")
+    export examples_heisenberg_triangular
+end
+using .ExamplesHeisenbergTriangular
+
 # Gradients
 # ---------
 module GradientsC4vCTMRG
