@@ -15,4 +15,6 @@ const init_code = quote
     const fast_tests = $fast
 end
 
-ParallelTestRunner.runtests(PEPSKit, args; testsuite, init_code)
+# workers peak at ~4.5-6 GiB (examples, AD-heavy tests), well above PTR's 2 GiB default;
+# running 4 at once on a 16 GB GitHub runner exhausts memory and the job gets cancelled
+ParallelTestRunner.runtests(PEPSKit, args; testsuite, init_code, memory_per_worker = 6 * 2^30)

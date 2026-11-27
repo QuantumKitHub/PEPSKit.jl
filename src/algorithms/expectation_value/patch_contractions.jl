@@ -12,9 +12,9 @@ function _check_factor_count(inds, O::MPOTerm)
 end
 
 """
-    contract_local_operator(inds, O, ket::InfinitePEPS, bra::InfinitePEPS, env)
-    contract_local_operator(inds, O, ket::InfinitePEPO, bra::InfinitePEPO, env)
-    contract_local_operator(inds, O, state::InfinitePEPO, env)
+    contract_local_operator(inds, O, ket::InfinitePEPS, bra::InfinitePEPS, env, allocator)
+    contract_local_operator(inds, O, ket::InfinitePEPO, bra::InfinitePEPO, env, allocator)
+    contract_local_operator(inds, O, state::InfinitePEPO, env, allocator)
 
 Contract a local operator `O` between `ket` and `bra` states, computing `⟨bra|O|ket⟩`, where
 `ket` and `bra` correspond to either a PEPS or a PEPO representing a PEPS with ancillary
@@ -25,27 +25,28 @@ the result is contracted over the surrounding virtual indices using the environm
 function contract_local_operator(
         inds::Vector{CartesianIndex{2}}, O,
         ket::InfinitePEPS, bra::InfinitePEPS, env,
+        allocator,
     )
     _check_factor_count(inds, O)
     static_inds = Tuple(Val.(inds))
-    return _contract_local_operator(static_inds, O, (ket, bra), env)
+    return _contract_local_operator(static_inds, O, (ket, bra), env, allocator)
 end
 function contract_local_operator(
-        inds::Vector{CartesianIndex{2}}, O, state::InfinitePEPO, env
+        inds::Vector{CartesianIndex{2}}, O, state::InfinitePEPO, env, allocator
     )
     size(state, 3) == 1 || throw(DimensionMismatch("only single-layer densitymatrices are supported"))
     _check_factor_count(inds, O)
     static_inds = Tuple(Val.(inds))
-    return _contract_local_operator(static_inds, O, state, env)
+    return _contract_local_operator(static_inds, O, state, env, allocator)
 end
 function contract_local_operator(
-        inds::Vector{CartesianIndex{2}}, O, ket::InfinitePEPO, bra::InfinitePEPO, env
+        inds::Vector{CartesianIndex{2}}, O, ket::InfinitePEPO, bra::InfinitePEPO, env, allocator
     )
     size(ket) == size(bra) || throw(DimensionMismatch("incompatible bra and ket dimensions"))
     size(ket, 3) == 1 || throw(DimensionMismatch("only single-layer densitymatrices are supported"))
     _check_factor_count(inds, O)
     static_inds = Tuple(Val.(inds))
-    return _contract_local_operator(static_inds, O, (ket, bra), env)
+    return _contract_local_operator(static_inds, O, (ket, bra), env, allocator)
 end
 function contract_local_operator(inds::Vector{Tuple{Int, Int}}, O, args...)
     return contract_local_operator(CartesianIndex.(inds), O, args...)
@@ -59,9 +60,9 @@ Base.@deprecate(
 )
 
 """
-    contract_local_norm(inds, ket::InfinitePEPS, bra::InfinitePEPS, env)
-    contract_local_norm(inds, ket::InfinitePEPO, bra::InfinitePEPO, env)
-    contract_local_norm(inds, state::InfinitePEPO, env)
+    contract_local_norm(inds, ket::InfinitePEPS, bra::InfinitePEPS, env, allocator)
+    contract_local_norm(inds, ket::InfinitePEPO, bra::InfinitePEPO, env, allocator)
+    contract_local_norm(inds, state::InfinitePEPO, env, allocator)
 
 Contract a local norm corresponding to the overlap `ket` and `bra` states, computing a patch
 of `⟨bra|ket⟩`, where `ket` and `bra` correspond to either a PEPS or a PEPO representing a
@@ -74,23 +75,23 @@ particular, the patch location is precisely the same as that of the patch used i
 [`contract_local_operator`](@ref).
 """
 function contract_local_norm(
-        inds::Vector{CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env
+        inds::Vector{CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env, allocator
     )
     static_inds = Tuple(Val.(inds))
-    return _contract_local_norm(static_inds, (ket, bra), env)
+    return _contract_local_norm(static_inds, (ket, bra), env, allocator)
 end
-function contract_local_norm(inds::Vector{CartesianIndex{2}}, state::InfinitePEPO, env)
+function contract_local_norm(inds::Vector{CartesianIndex{2}}, state::InfinitePEPO, env, allocator)
     size(state, 3) == 1 || throw(DimensionMismatch("only single-layer densitymatrices are supported"))
     static_inds = Tuple(Val.(inds))
-    return _contract_local_norm(static_inds, state, env)
+    return _contract_local_norm(static_inds, state, env, allocator)
 end
 function contract_local_norm(
-        inds::Vector{CartesianIndex{2}}, ket::InfinitePEPO, bra::InfinitePEPO, env
+        inds::Vector{CartesianIndex{2}}, ket::InfinitePEPO, bra::InfinitePEPO, env, allocator
     )
     size(ket) == size(bra) || throw(DimensionMismatch("incompatible bra and ket dimensions"))
     size(ket, 3) == 1 || throw(DimensionMismatch("only single-layer densitymatrices are supported"))
     static_inds = Tuple(Val.(inds))
-    return _contract_local_norm(static_inds, (ket, bra), env)
+    return _contract_local_norm(static_inds, (ket, bra), env, allocator)
 end
 function contract_local_norm(inds::Vector{Tuple{Int, Int}}, args...)
     return contract_local_norm(CartesianIndex.(inds), args...)

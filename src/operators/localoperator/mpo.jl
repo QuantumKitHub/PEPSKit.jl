@@ -57,13 +57,12 @@ function _validate_mpo_term(inds, term::MPOTerm, lattice::AbstractMatrix{<:Eleme
     return nothing
 end
 
-# TODO: Narrow AbstractVector to MPOTerm once TensorMap's scalar type is restricted to Number.
-add_term!(operator::LocalOperator, inds::Tuple, term::AbstractVector) =
+add_term!(operator::LocalOperator, inds::Tuple, term::MPOTerm) =
     add_term!(operator, collect(inds), term)
-add_term!(operator::LocalOperator, inds::AbstractVector, term::AbstractVector) =
+add_term!(operator::LocalOperator, inds::AbstractVector, term::MPOTerm) =
     add_term!(operator, CartesianIndex{2}[CartesianIndex{2}(ind) for ind in inds], term)
 function add_term!(
-        operator::LocalOperator, inds::Vector{CartesianIndex{2}}, term::AbstractVector
+        operator::LocalOperator, inds::Vector{CartesianIndex{2}}, term::MPOTerm
     )
     isempty(term) && throw(ArgumentError("An MPO term should contain at least one tensor."))
     term = _promote_term_scalars(term)
