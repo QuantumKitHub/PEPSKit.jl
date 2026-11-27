@@ -6,7 +6,7 @@ This example contracts and optimizes an antiferromagnetic spin-1/2 Heisenberg PE
 on the triangular lattice using [`InfinitePEPSTriangular`](@ref),
 [`CTMRGEnvTriangular`](@ref), and the native [`fixedpoint`](@ref) interface.
 A single-site tensor and fixed 120° sublattice rotations represent a three-sublattice
-state. We start from a seeded random real tensor with `D = 2` and a complex
+state, following the spiral ansatz of [Hasik and Corboz](https://arxiv.org/abs/2311.05534). We start from a seeded random real tensor with `D = 2` and a complex
 environment with `χ = 32`. Check convergence in `χ` before drawing quantitative
 conclusions from the energy.
 
@@ -17,7 +17,6 @@ then run `julia --project=examples --threads=2 examples/triangular_ctmrg/main.jl
 
 using Random
 using TensorKit, PEPSKit
-using TensorKitTensors.SpinOperators
 Random.seed!(123456789);
 
 md"""
@@ -37,7 +36,7 @@ To count every nearest-neighbor bond once, we use the following three offsets:
 | 120°        | `(1, 0)`          | SE          | `-2π/3`           |
 
 The bond-family angles are unoriented; the relative rotations refer to the directed
-offsets in the table. With `R(θ) = exp(-im * θ * S_y)`, the physical tensor at
+offsets in the table. With `R(θ) = exp(im * θ * S_y)`, the physical tensor at
 `[r, c]` is `R((r - 1)q[1] + (c - 1)q[2]) * A`, where `q = (-2π/3, 2π/3)`.
 This gives `[A B C; C A B; B C A]`, with `B = R(2π/3) * A` and
 `C = R(4π/3) * A`, up to irrelevant spin-1/2 tensor phases. It is the PEPSKit
@@ -45,6 +44,9 @@ version of the variPEPS pattern `[A B C; B C A; C A B]` with `q = (2π/3, 2π/3)
 
 We optimize `A` in a single-site unit cell. All three sublattices share its
 variational parameters, and the wavevector stays fixed during optimization.
+The same state could also be optimized with three independent tensors, using
+`InfiniteTriangularThreeSublattice()` and a sheared `unitcell = (1, 3), shift = 1`
+PEPS, or with a general `InfiniteTriangular(3, 3)` unit cell of nine tensors.
 """
 
 D = 2
@@ -55,31 +57,21 @@ peps₀ = InfinitePEPSTriangular(randn, Float64, P, V; unitcell = (1, 1));
 md"""
 ## Hamiltonian and CTMRG
 
-The Heisenberg interaction is invariant under a common rotation of both spins, so
-only their relative rotation enters each bond. We absorb it into the gate on the
-second site: `hδ = (id(P) ⊗ R(q⋅δ))' * h * (id(P) ⊗ R(q⋅δ))`. The diagonal
-angle `-4π/3` gives the same gate as `2π/3`. This lets the existing
-[`LocalOperator`](@ref) and `expectation_value` interfaces evaluate the physical
-three-sublattice energy using one tensor and three bond gates.
+The sublattice rotation is a property of the lattice: [`InfiniteTriangular`](@ref)
+accepts the rotation angles `(θr, θc)` per step along the rows and columns, and the
+spin axis generating the rotation. Model constructors then return the rotated
+Hamiltonian ``U^† H U``. The Heisenberg interaction is invariant under a common
+rotation of both spins, so only their relative rotation enters each bond, giving
+`hδ = (id(P) ⊗ R(q⋅δ))' * h * (id(P) ⊗ R(q⋅δ))`. The diagonal angle `-4π/3` gives
+the same gate as `2π/3`. This lets the existing [`LocalOperator`](@ref) and
+`expectation_value` interfaces evaluate the physical three-sublattice energy using one
+tensor and three bond gates.
 
-We use antiferromagnetic coupling `J = 1`. Keep the neighbor coordinates unwrapped,
-including those outside the unit cell: the contractions apply periodicity while
-preserving which bond is intended. Triangular expectation values support onsite and nearest-neighbor
-terms in all three bond families.
+We use antiferromagnetic coupling `J = 1`.
 """
 
-h = S_x_S_x() + S_y_S_y() + S_z_S_z()
-offsets = (CartesianIndex(0, 1), CartesianIndex(1, -1), CartesianIndex(1, 0))
-q = (-2π / 3, 2π / 3)
-rotation(θ) = TensorMap([cos(θ / 2) -sin(θ / 2); sin(θ / 2) cos(θ / 2)], P, P)
-gates = map(offsets) do δ
-    U = id(P) ⊗ rotation(q[1] * δ[1] + q[2] * δ[2])
-    return U' * h * U
-end
-H = LocalOperator(
-    physicalspace(peps₀),
-    [(I, I + δ) => gate for I in CartesianIndices(size(peps₀)) for (δ, gate) in zip(offsets, gates)],
-);
+lattice = InfiniteTriangular(1, 1; rotation = (-2π / 3, 2π / 3), axis = :y)
+H = heisenberg_XYZ(Float64, Trivial, lattice; Jx = 1, Jy = 1, Jz = 1);
 
 md"""
 The environment constructor takes the doubled virtual space `V ⊗ V'` of the PEPS
@@ -143,4 +135,29 @@ md"""
 The `D = 2` ansatz allows entanglement beyond the 120° product state, whose
 energy is `-3/8` per site. The returned `E` is the energy per unit cell, which here
 contains a single site. Increase both `D` and `χ` to study the quantum ground state.
+
+## Explicit three-sublattice state
+
+The optimized PEPS lives in the rotated frame. [`rotate_sublattices`](@ref) applies the
+rotation to the tensors and returns the physical state on the smallest unit cell on which
+the rotation is periodic, here the sheared `[A B C]` cell with `shift = 1`. Its energy with
+the unrotated Hamiltonian of [`InfiniteTriangularThreeSublattice`](@ref) agrees with the
+energy above, and it can be used to evaluate observables that are not invariant under the
+rotation, such as the local magnetization of each sublattice.
 """
+
+peps_three = rotate_sublattices(peps, lattice)
+@show size(peps_three) peps_three.shift
+env_three, = leading_boundary(
+    CTMRGEnvTriangular(ones, ComplexF64, V ⊗ V', ℂ^χ; unitcell = size(peps_three), shift = peps_three.shift),
+    peps_three; boundary_alg...,
+)
+H_three = heisenberg_XYZ(InfiniteTriangularThreeSublattice(); Jx = 1, Jy = 1, Jz = 1)
+@show real(expectation_value(peps_three, H_three, env_three)) / length(peps_three)
+
+Sx, Sz = (rotation_generator(Float64, P, axis) for axis in (:x, :z))
+magnetization = map(1:3) do c
+    O(S) = LocalOperator(fill(P, 3, 3), [(1, c)] => S) # operator cell must contain the state cell
+    return real.((expectation_value(peps_three, O(Sx), env_three), expectation_value(peps_three, O(Sz), env_three)))
+end
+@show magnetization;

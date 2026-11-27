@@ -52,6 +52,26 @@ function examples_heisenberg_triangular(AT)
         @info "Three-sublattice energy per site = $e_three"
         @test e_three ≈ E_ref atol = 3.0e-3
 
+        # the same 120° state with a single tensor, using a sublattice rotation of the
+        # Hamiltonian (spiral ansatz with q = (-2π/3, 2π/3))
+        Random.seed!(1)
+        lattice_rot = InfiniteTriangular(1, 1; rotation = (-2π / 3, 2π / 3))
+        peps₀ = adapt(AT, InfinitePEPSTriangular(randn, ComplexF64, Pspace, Vspace))
+        e_rot, peps_rot = optimize_energy_per_site(heisenberg(lattice_rot), peps₀, 1)
+        @test size(peps_rot) == (1, 1)
+        @info "Single-site rotated energy per site = $e_rot"
+        @test e_rot ≈ E_ref atol = 3.0e-3
+        @test e_rot ≈ e_three atol = 3.0e-3
+        # the explicit rotated state is a three-sublattice state with the same energy
+        peps_rot3 = rotate_sublattices(peps_rot, lattice_rot)
+        @test size(peps_rot3) == (1, 3) && peps_rot3.shift == 1
+        env_rot3, = leading_boundary(
+            CTMRGEnvTriangular(randn, ComplexF64, Vspace ⊗ Vspace', ComplexSpace(χenv); unitcell = (1, 3), shift = 1),
+            peps_rot3; boundary_alg...,
+        )
+        H_three = heisenberg(InfiniteTriangularThreeSublattice())
+        @test real(expectation_value(peps_rot3, H_three, env_rot3)) / 3 ≈ e_rot atol = 1.0e-6
+
         # a 2 × 2 unit cell frustrates the 120° order
         Random.seed!(1)
         peps₀ = adapt(AT, InfinitePEPSTriangular(randn, ComplexF64, Pspace, Vspace; unitcell = (2, 2)))

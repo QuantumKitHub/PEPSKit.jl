@@ -783,3 +783,73 @@ end
         @test g_s[1, s] ≈ g_sum rtol = 1.0e-6
     end
 end
+
+@testset "CTM_triangular - Sublattice rotation" begin
+    Random.seed!(5)
+    P, V, χ = ComplexSpace(2), ComplexSpace(2), ComplexSpace(12)
+    heisenberg(lattice) = heisenberg_XYZ(lattice; Jx = 1.0, Jy = 1.0, Jz = 1.0)
+    calg = SimultaneousCTMRGTriangular(; tol = 1.0e-10, maxiter = 300, verbosity = 0)
+    galg = PEPSKit.FixedPointGradient(; solver_alg = (; alg = :GMRES, krylovdim = 30), tol = 1.0e-10, maxiter = 20, verbosity = 0)
+    ψ = InfinitePEPSTriangular(randn, ComplexF64, P, V)
+
+    # lattice interface and input checks
+    @test !has_sublattice_rotation(InfiniteTriangular(2, 2))
+    @test has_sublattice_rotation(InfiniteTriangular(1, 1; rotation = (π, π)))
+    @test_throws ArgumentError InfiniteTriangular(; rotation = (π, π), axis = :w)
+    @test heisenberg(InfiniteTriangular()) == heisenberg(InfiniteTriangular(; rotation = (0, 0)))
+    @test_throws ArgumentError j1_j2_model(InfiniteTriangular(); sublattice = true)
+    @test_throws ArgumentError hubbard_model(InfiniteTriangular(; rotation = (π, π)))
+
+    # terms which are not invariant under the rotation require a commensurate unit cell
+    lattice_120 = InfiniteTriangular(1, 1; rotation = (-2π / 3, 2π / 3))
+    @test_throws ArgumentError transverse_field_ising(lattice_120)
+    @test_throws ArgumentError heisenberg_XXZ(lattice_120; Delta = 0.5)
+    G = rotation_generator(ComplexF64, P, :y)
+    H_tfi = rotate_sublattices(repeat(transverse_field_ising(InfiniteTriangular()), 3, 3), lattice_120.rotation, G)
+    @test size(H_tfi) == (3, 3)
+    # rotations about the z-axis are compatible with U(1) symmetry
+    H_u1 = heisenberg_XXZ(ComplexF64, U1Irrep, InfiniteTriangular(; rotation = (-2π / 3, 2π / 3), axis = :z); Delta = 0.5, spin = 1 // 2)
+    @test sectortype(H_u1.lattice[1]) == U1Irrep
+    @test length(H_u1.terms) == 3
+
+    # explicit rotated states are stored in the smallest compatible (sheared) unit cell
+    for (rotation, cellsize, shift) in (((-2π / 3, 2π / 3), (1, 3), 1), ((π, π), (1, 2), 1), ((0, π), (1, 2), 0), ((π, 0), (2, 1), 0))
+        ψ_rot = rotate_sublattices(ψ, InfiniteTriangular(; rotation))
+        @test size(ψ_rot) == cellsize
+        @test ψ_rot.shift == shift
+    end
+    @test_throws ArgumentError rotate_sublattices(ψ, InfiniteTriangular(; rotation = (0.1, 0.2)))
+
+    # ⟨ψ|U'HU|ψ⟩ on a single-site unit cell equals ⟨Uψ|H|Uψ⟩ on the expanded unit cell,
+    # both for the energy and its gradient
+    function value_and_grad(ψ, env, H)
+        E, g = Zygote.withgradient(ψ) do x
+            env′, = PEPSKit.hook_pullback(leading_boundary, env, x, calg; alg_rrule = galg)
+            return PEPSKit.cost_function(x, env′, H)
+        end
+        return E, only(g)
+    end
+    for (rotation, lattice_full) in (
+            ((-2π / 3, 2π / 3), InfiniteTriangularThreeSublattice()),
+            ((π, π), InfiniteTriangular(2, 2)),
+        )
+        H_full = heisenberg(lattice_full)
+        nsites = length(vertices(lattice_full))
+        lattice = InfiniteTriangular(1, 1; rotation)
+        ψ_rot = rotate_sublattices(ψ, lattice)
+        env, = leading_boundary(CTMRGEnvTriangular(randn, ComplexF64, V ⊗ V', χ), ψ, calg)
+        env_rot, = leading_boundary(
+            CTMRGEnvTriangular(randn, ComplexF64, V ⊗ V', χ; unitcell = size(ψ_rot), shift = ψ_rot.shift),
+            ψ_rot, calg,
+        )
+        E, g = value_and_grad(ψ, env, heisenberg(lattice))
+        E_rot, g_rot = value_and_grad(ψ_rot, env_rot, H_full)
+        @test E ≈ E_rot / nsites atol = 1.0e-8
+        # chain rule for A ↦ u(φ) A on every site of the expanded unit cell
+        g_sum = sum(CartesianIndices(size(ψ_rot))) do I
+            u = exp((im * PEPSKit._rotation_angle(rotation, I)) * G)
+            return u' * g_rot[I]
+        end
+        @test g[1, 1] ≈ g_sum / nsites rtol = 1.0e-6
+    end
+end

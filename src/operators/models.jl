@@ -4,6 +4,16 @@
 
 const InfiniteLattice = Union{InfiniteSquare, InfiniteTriangular, InfiniteTriangularThreeSublattice}
 
+# number of nearest neighbours of every site
+_coordination_number(lattice) = 2 * length(nearest_neighbours(lattice)) ÷ length(vertices(lattice))
+
+function _check_no_sublattice_rotation(lattice, model)
+    has_sublattice_rotation(lattice) && throw(
+        ArgumentError("sublattice rotations are only supported for spin models, not for `$model`")
+    )
+    return nothing
+end
+
 """
     nearest_neighbour_hamiltonian(lattice::Matrix{S}, h::AbstractTensorMap{T,S,2,2}) where {S,T}
 
@@ -52,11 +62,12 @@ function transverse_field_ising(
     ZZ = rmul!(SO.S_z_S_z(T, S), -4 * J)
     X = rmul!(SO.σˣ(T, S), g * -J)
     spaces = fill(domain(X)[1], size(lattice))
-    return LocalOperator(
+    H = LocalOperator(
         spaces,
         (neighbor => ZZ for neighbor in nearest_neighbours(lattice))...,
         ([idx] => X for idx in vertices(lattice))...,
     )
+    return rotate_sublattices(H, lattice)
 end
 
 """
@@ -84,9 +95,10 @@ function heisenberg_XYZ(
         rmul!(SO.S_y_S_y(T, S; spin = spin), Jy) +
         rmul!(SO.S_z_S_z(T, S; spin = spin), Jz)
     spaces = fill(domain(term)[1], size(lattice))
-    return LocalOperator(
+    H = LocalOperator(
         spaces, (neighbor => term for neighbor in nearest_neighbours(lattice))...
     )
+    return rotate_sublattices(H, lattice)
 end
 
 """
@@ -115,9 +127,10 @@ function heisenberg_XXZ(
             Delta * SO.S_z_S_z(T, S; spin = spin)
     )
     spaces = fill(domain(h)[1], size(lattice))
-    return LocalOperator(
+    H = LocalOperator(
         spaces, (neighbor => h for neighbor in nearest_neighbours(lattice))...
     )
+    return rotate_sublattices(H, lattice)
 end
 
 """
@@ -146,14 +159,18 @@ function hubbard_model(
     )
     # TODO: just add this
     @assert n == 0 "Currently no support for imposing a fixed particle number"
+    _check_no_sublattice_rotation(lattice, hubbard_model)
     N = HO.e_num(T, particle_symmetry, spin_symmetry)
     pspace = space(N, 1)
     unit = TensorKit.id(pspace)
     hopping = HO.e_hopping(T, particle_symmetry, spin_symmetry)
     interaction_term = HO.ud_num(T, particle_symmetry, spin_symmetry)
     site_term = U * interaction_term - mu * N
-    h = (-t) * hopping + (1 / 4) * (site_term ⊗ unit + unit ⊗ site_term)
-    return nearest_neighbour_hamiltonian(fill(pspace, size(lattice)), h)
+    z = _coordination_number(lattice)
+    h = (-t) * hopping + (1 / z) * (site_term ⊗ unit + unit ⊗ site_term)
+    return LocalOperator(
+        fill(pspace, size(lattice)), (neighbor => h for neighbor in nearest_neighbours(lattice))...
+    )
 end
 
 """
@@ -179,6 +196,7 @@ function bose_hubbard_model(
         T::Type{<:Number}, symmetry::Type{<:Sector}, lattice::InfiniteLattice;
         cutoff::Integer = 5, t = 1.0, U = 1.0, mu = 0.0, n::Integer = 0,
     )
+    _check_no_sublattice_rotation(lattice, bose_hubbard_model)
     hopping_term = BO.b_hopping(T, symmetry; cutoff)
     N = BO.b_num(T, symmetry; cutoff = cutoff)
     interaction_term = N * (N - id(domain(N)))
@@ -229,19 +247,23 @@ function tj_model(
         lattice::InfiniteLattice;
         t = 2.5, J = 1.0, mu = 0.0, slave_fermion::Bool = false,
     )
+    _check_no_sublattice_rotation(lattice, tj_model)
     hopping = TJ.e_hopping(T, particle_symmetry, spin_symmetry; slave_fermion)
     num = TJ.e_num(T, particle_symmetry, spin_symmetry; slave_fermion)
     heis = TJ.S_exchange(T, particle_symmetry, spin_symmetry; slave_fermion) -
         (1 / 4) * (num ⊗ num)
     pspace = space(num, 1)
     unit = TensorKit.id(pspace)
-    h = (-t) * hopping + J * heis - (mu / 4) * (num ⊗ unit + unit ⊗ num)
-    return nearest_neighbour_hamiltonian(fill(pspace, size(lattice)), h)
+    z = _coordination_number(lattice)
+    h = (-t) * hopping + J * heis - (mu / z) * (num ⊗ unit + unit ⊗ num)
+    return LocalOperator(
+        fill(pspace, size(lattice)), (neighbor => h for neighbor in nearest_neighbours(lattice))...
+    )
 end
 
 """
     j1_j2_model([T::Type{<:Number}, S::Type{<:Sector},] lattice::InfiniteLattice;
-                J1=1.0, J2=1.0, spin=1//2, sublattice=true)
+                J1=1.0, J2=1.0, spin=1//2, sublattice=lattice isa InfiniteSquare)
 
 `LocalOperator` for the ``J_1\\text{-}J_2`` model Hamiltonian on the square lattice,
 ```math
@@ -249,15 +271,23 @@ H = J_1 \\sum_{\\langle i,j \\rangle} \\vec{S}_i \\cdot \\vec{S}_j
 + J_2 \\sum_{\\langle\\langle i,j \\rangle\\rangle} \\vec{S}_i \\cdot \\vec{S}_j,
 ```
 where ``\\vec{S}_i = (S_i^x, S_i^y, S_i^z)``.
-The `sublattice` kwarg enables a single-site unit cell ground state via a
-unitary sublattice rotation.
+On the square lattice, the `sublattice` kwarg enables a single-site unit cell ground state
+via a unitary sublattice rotation. This rotation is not available on non-bipartite lattices;
+for an [`InfiniteTriangular`](@ref) lattice, use its `rotation` instead, e.g.
+`InfiniteTriangular(1, 1; rotation = (-2π/3, 2π/3))` for 120° order.
 """
 function j1_j2_model(lattice::InfiniteLattice; kwargs...)
     return j1_j2_model(ComplexF64, Trivial, lattice; kwargs...)
 end
 function j1_j2_model(
         T::Type{<:Number}, S::Type{<:Sector}, lattice::InfiniteLattice;
-        J1 = 1.0, J2 = 1.0, spin = 1 // 2, sublattice = true,
+        J1 = 1.0, J2 = 1.0, spin = 1 // 2, sublattice::Bool = lattice isa InfiniteSquare,
+    )
+    sublattice && !(lattice isa InfiniteSquare) && throw(
+        ArgumentError(
+            "the `sublattice` rotation of `j1_j2_model` requires a bipartite `InfiniteSquare` lattice; \
+            use the `rotation` of an `InfiniteTriangular` lattice instead"
+        )
     )
     term_AA = SO.S_exchange(T, S; spin)
     term_AB = if sublattice
@@ -266,11 +296,12 @@ function j1_j2_model(
         term_AA
     end
     spaces = fill(domain(term_AA)[1], size(lattice))
-    return LocalOperator(
+    H = LocalOperator(
         spaces,
         (neighbor => J1 * term_AB for neighbor in nearest_neighbours(lattice))...,
         (neighbor => J2 * term_AA for neighbor in next_nearest_neighbours(lattice))...,
     )
+    return rotate_sublattices(H, lattice)
 end
 
 """
@@ -293,6 +324,8 @@ function pwave_superconductor(
         T::Type{<:Number}, lattice::InfiniteLattice;
         t::Number = 1, μ::Number = 2, Δ::Number = 1
     )
+    lattice isa InfiniteSquare ||
+        throw(ArgumentError("`pwave_superconductor` is only defined on the square lattice"))
     physical_space = FO.fermion_space(Trivial)
     spaces = fill(physical_space, size(lattice))
     # hopping and pairing operators
